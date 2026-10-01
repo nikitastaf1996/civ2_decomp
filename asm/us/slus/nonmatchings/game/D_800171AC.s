@@ -1,0 +1,11 @@
+.section .rodata
+
+nonmatching D_800171AC
+
+dlabel D_800171AC
+    /* 79AC 800171AC A000A000 */ .word 0x00A000A0
+    /* 79B0 800171B0 9F009E00 */ .word 0x009E009F
+    /* 79B4 800171B4 9C009900 */ .word 0x0099009C
+    /* 79B8 800171B8 95008F00 */ .word 0x008F0095
+    /* 79BC 800171BC 80000000 */ .word 0x00000080
+enddlabel D_800171AC

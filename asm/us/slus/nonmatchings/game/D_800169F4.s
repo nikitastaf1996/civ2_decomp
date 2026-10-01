@@ -1,0 +1,10 @@
+.section .rodata
+
+.align 2
+nonmatching D_800169F4
+
+dlabel D_800169F4
+    /* 71F4 800169F4 */ .asciz "    CD-ROM FILE SEARCH MISS    "
+    /* 2020202043442D524F4D2046494C4520534541524348204D4953532020202000 */
+.align 2
+enddlabel D_800169F4

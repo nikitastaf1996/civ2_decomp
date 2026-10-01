@@ -1,0 +1,5 @@
+build/
+disks/
+bin/
+*.pyc
+__pycache__/

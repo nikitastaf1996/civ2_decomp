@@ -1,0 +1,10 @@
+.section .rodata
+
+.align 2
+nonmatching D_80016A34
+
+dlabel D_80016A34
+    /* 7234 80016A34 */ .asciz "      PUSH RESET BUTTON        "
+    /* 2020202020205055534820524553455420425554544F4E202020202020202000 */
+.align 2
+enddlabel D_80016A34

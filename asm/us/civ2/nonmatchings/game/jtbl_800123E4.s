@@ -1,0 +1,13 @@
+.section .rodata
+
+nonmatching jtbl_800123E4
+
+dlabel jtbl_800123E4
+    /* 2BE4 800123E4 D4700B80 */ .word .L800B70D4
+    /* 2BE8 800123E8 30710B80 */ .word .L800B7130
+    /* 2BEC 800123EC 8C710B80 */ .word .L800B718C
+    /* 2BF0 800123F0 E8710B80 */ .word .L800B71E8
+    /* 2BF4 800123F4 E8710B80 */ .word .L800B71E8
+    /* 2BF8 800123F8 E8710B80 */ .word .L800B71E8
+    /* 2BFC 800123FC 44720B80 */ .word .L800B7244
+enddlabel jtbl_800123E4

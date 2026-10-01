@@ -1,0 +1,11 @@
+.section .rodata
+
+nonmatching D_80010A38
+
+dlabel D_80010A38
+    /* 1238 80010A38 582D5365 */ .word 0x65532D58
+    /* 123C 80010A3C 6C656374 */ .word 0x7463656C
+    /* 1240 80010A40 202081A2 */ .word 0xA2812020
+    /* 1244 80010A44 2D43616E */ .word 0x6E61432D
+    /* 1248 80010A48 63656C00 */ .word 0x006C6563
+enddlabel D_80010A38

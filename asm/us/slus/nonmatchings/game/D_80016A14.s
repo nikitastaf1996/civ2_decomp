@@ -1,0 +1,10 @@
+.section .rodata
+
+.align 2
+nonmatching D_80016A14
+
+dlabel D_80016A14
+    /* 7214 80016A14 */ .asciz "   PUSH ANY KEY TO RETRY OR    "
+    /* 2020205055534820414E59204B455920544F205245545259204F522020202000 */
+.align 2
+enddlabel D_80016A14
