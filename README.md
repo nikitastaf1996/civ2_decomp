@@ -6,11 +6,11 @@ Both retail PS-X executables on the disc are split, rebuilt from C + assembly, a
 
 | Executable | Role | Retail Size | SHA-1 | Game Functions | PsyQ 4.2 SDK Symbols | Matched C Functions | Total Accounted |
 | :--- | :--- | :---: | :--- | :---: | :---: | :---: | :---: |
-| **`SLUS_007.92`** | Title / Setup / Intro Movie Player | 290,816 B (`0x47000`) | `362a030a231fc5952010909faf848a8a461bbb3c` | 208 | 375 | **73 / 208 (35.1%)** | **448 / 583 (76.8%)** |
-| **`CIV2.EXE`** | Main Strategy Game Engine | 1,351,680 B (`0x14A000`) | `919bad81720f9b0e129fd5f10fb155cd7aa3c98c` | 1,427 | 390 | **565 / 1,427 (39.6%)** | **955 / 1,817 (52.6%)** |
-| **Combined** | **Full Game** | **1,642,496 B** | **100% Byte-Identical** | **1,635** | **765** | **638 / 1,635 (39.0%)** | **1,403 / 2,400 (58.5%)** |
+| **`SLUS_007.92`** | Title / Setup / Intro Movie Player | 290,816 B (`0x47000`) | `362a030a231fc5952010909faf848a8a461bbb3c` | 208 | 375 | **82 / 208 (39.4%)** | **457 / 583 (78.4%)** |
+| **`CIV2.EXE`** | Main Strategy Game Engine | 1,351,680 B (`0x14A000`) | `919bad81720f9b0e129fd5f10fb155cd7aa3c98c` | 1,427 | 390 | **594 / 1,427 (41.6%)** | **984 / 1,817 (54.2%)** |
+| **Combined** | **Full Game** | **1,642,496 B** | **100% Byte-Identical** | **1,635** | **765** | **676 / 1,635 (41.3%)** | **1,441 / 2,400 (60.0%)** |
 
-*(Note: 636 of the 638 matched C functions are spliced directly into `src/slus/game.c` and `src/civ2/game.c`; 2 jump-table functions in `CIV2.EXE` — `func_800916F0` and `func_80094298` — also match 100% and await `.rodata` jump-table migration.)*
+*(Note: 674 of the 676 matched C functions are spliced directly into `src/slus/game.c` and `src/civ2/game.c`; 2 jump-table functions in `CIV2.EXE` — `func_800916F0` and `func_80094298` — also match 100% and await `.rodata` jump-table migration.)*
 
 ---
 
@@ -52,6 +52,57 @@ To maximize automated byte-for-byte matching before manual decompilation, severa
    - **Byte-Stride Global Pointer Arithmetic**: Casts `&D_XXXXXXXX + offset` to `(void *)&D_XXXXXXXX + offset` so GNU C pointer arithmetic uses 1-byte stride instead of 4-byte `M2C_UNK` stride.
    - **Missing Leading Parameter Padding**: Pads skipped leading MIPS argument registers (`arg0`, `arg1`, `arg2`) in function signatures when a function only reads higher argument registers (`arg1..arg3`).
    - **Cross-Function Symbol Aliasing (`tools/splice_matched.py`)**: Uses GNU C `__asm__("SYM")` labels on block-scope `extern` declarations when different functions in `game.c` infer signed vs. unsigned types for the same global symbol, preserving exact per-function codegen in a single translation unit.
+
+---
+
+### 4. Call-Graph Impact Analysis & Manual Decompilation of Core Engine Hubs
+Using `tools/callgraph_impact.py`, all unmatched functions in `SLUS_007.92` and `CIV2.EXE` were ranked by caller fan-in, total call sites, and global data array access frequency. The **38 highest-impact hub functions** (9 in `SLUS_007.92` and 29 in `CIV2.EXE`, accounting for **2,369 call sites** across both executables) were manually decompiled, verified to 100% byte-for-byte identity with `tools/try_match.py`, and spliced into `src/slus/game.c` and `src/civ2/game.c`:
+
+#### Top Manually Decompiled Hubs in `SLUS_007.92`
+| Function | Callers | Call Sites | Size | Engine Role & Key Findings |
+| :--- | :---: | :---: | :---: | :--- |
+| `func_8001B074` | 25 | 122 | `0x74` | `GsSPRITE` 36-byte (`0x24`) entry initializer from texture table (`0x80` neutral RGB, `0x1000` 1.0x fixed-point scale) |
+| `func_8001EA80` | 9 | 24 | `0xF0` | `mess_key` localized text/dialog dispatcher (`D_80017188`) |
+| `func_8001E20C` | 14 | 18 | `0x124` | `mess_string_write` text entry renderer over 20-byte (`0x14`) descriptors in `D_80046F1C` |
+| `func_8002B570` | 11 | 13 | `0x18` | Stripped variadic debug `printf` stub (`void func_8002B570(s32 fmt, ...) {}`) |
+| `func_8001A1B8` | 8 | 10 | `0x54` | Full-VRAM `ClearImage` (`640x240`) + `DrawSync(0)` |
+| `func_8001B250` | 6 | 7 | `0x9C` | Dual-port controller pad state poller (`D_800552A8` current, `D_800552AC` newly pressed edge trigger, `D_800552B0` previous) |
+| `func_8001DC20` | 4 | 4 | `0xB4` | Marks sprites `0x45..0x64` invisible (`attr |= 0x80000000`) in `D_8012A0E0` (`0x24` stride) and clears font VRAM cache |
+| `func_80018EF4` | 4 | 4 | `0x30` | Big-endian 16-bit command dispatcher (`(arg0[0] << 8) \| arg0[1]`) |
+| `func_8002BD88` | 4 | 4 | `0x54` | Looks up 11-byte (`0xB`) CD/resource descriptor in `D_8004C5E8` |
+
+#### Top Manually Decompiled Hubs in `CIV2.EXE`
+| Function | Callers | Call Sites | Size | Engine Role & Key Findings |
+| :--- | :---: | :---: | :---: | :--- |
+| `func_80072A28` | 75 | 259 | `0xB0` | **`civ_has_tech(civ_id, tech_id)`** — queries tech bitmask in Civilization struct array (`D_801176EC`, stride `0x578` = 1,400 B) |
+| `func_80089B20` | 59 | 193 | `0x84` | **`city_has_building(city_id, bldg_id)`** — queries improvement bitmask (`1..34`) in City struct array (`D_80113F08`, stride `0x58` = 88 B) |
+| `func_800DEF04` | 52 | 176 | `0xAC` | **`civ_has_active_wonder(civ_id, wonder_id)`** — checks wonder obsolescence & city owner (`D_80113ED8[city_id].owner == civ_id`) |
+| `func_800C6DCC` | 49 | 166 | `0x34` | **`append_string_by_id(buf, str_id)`** — appends string from `LABELS.TXT`/`GAME.TXT` pointer table `D_8015894C[str_id]` |
+| `func_800CEBD4` | 71 | 161 | `0x28` | **`clamp(val, min, max)`** (`/* @O2 */`) |
+| `func_800C6E70` | 42 | 156 | `0x44` | **`append_int_decimal(buf, val)`** — formats `s16` in base 10 via `itoa` (`func_800F5254`) and appends to string buffer |
+| `func_800A8560` | 32 | 143 | `0x84` | **`read_text_file_line()`** — reads next line from active ruleset/text file handle (`D_80158D30`) into `D_80121340` |
+| `func_800B8C60` | 43 | 132 | `0xA8` | **`show_modal_dialog(title, text, flags)`** — constructs `0x2A0`-byte dialog object on stack, runs modal loop, stores selection in `D_80158FD8` |
+| `func_80095174` | 51 | 130 | `0xB4` | **`get_civ_adjective_name(civ_id)`** — resolves tribe adjective from `D_80116ADC` (stride `0x30`) or custom string `D_80116EDA` (stride `0xF2`) |
+| `func_80095228` | 50 | 82 | `0xB4` | **`get_civ_noun_name(civ_id)`** — resolves tribe plural noun from `D_80116ADE` (stride `0x30`) or custom string `D_80116EF2` (stride `0xF2`) |
+| `func_800B16B4` | 70 | 81 | `0x3C` | **`Dialog_ctor(this, flags)`** — base UI dialog constructor (`this->flags_1A6 = flags`) |
+| `func_80098848` | 37 | 80 | `0x50` | **`get_tile_unit_owner(x, y)`** — returns tile owner if unit present (`(flags & 0x42) == 2`), else `-1` |
+| `func_800988E8` | 26 | 51 | `0x54` | **`get_tile_city_or_unit_owner(x, y)`** — returns tile owner if bit 0 set (`flags & 1`), else `-1` |
+| `func_8007B6FC` | 37 | 51 | `0x30` | **`get_unit_type(unit_id)`** — reads `unit.type` (`D_8010D6CC`, stride `0x1A` = 26 B) |
+| `func_8009BD08` | 27 | 50 | `0xAC` | **`refresh_map_viewports(x, y)`** — updates active viewport descriptors (`D_8011E72C`, stride `0x2C0` = 704 B) |
+| `func_800CED94` | 21 | 46 | `0x74` | **`map_distance(x1, y1, x2, y2)`** — isometric tile distance with cylindrical world-wrap (`D_8011A250 & 0x8000`, width `D_8011C308`) |
+| `func_80098684` | 20 | 42 | `0x4C` | **`is_tile_visible_to_civ(x, y, civ_id)`** — checks per-civ fog-of-war visibility mask (`tile[4] & (1 << civ_id)`) |
+| `func_8007B798` | 27 | 36 | `0x78` | **`get_unit_stack_head(unit_id)`** — walks `unit.prev_in_stack` linked list (`D_8010D6CA`, stride `0x1A`) |
+| `func_8007B6A0` | 15 | 36 | `0x5C` | **`get_unit_remaining_hp(unit_id)`** — `max(max_hp - unit.damage, 0)` (`D_8010D6BC`, stride `0x1A`) |
+| `func_80018C30` | 23 | 29 | `0x74` | Heap free-space query / memory compaction check (`D_80158564 - D_80158568`) |
+| `func_80094FE0` | 25 | 28 | `0xB4` | **`get_civ_leader_title(civ_id)`** — resolves ruler title from `D_80116ADA` or custom string `D_80116EC2` |
+| `func_800B20E4` | 20 | 28 | `0x7C` | UI control proportional value scaler (`(val * num / den) / 2`) |
+| `func_800DD82C` | 9 | 20 | `0x70` | Rating tier bucket classifier (`0..8` for `0..100`) (`/* @O2 */`) |
+| `func_800B31E8` | 8 | 18 | `0x44` | Linked-list item index finder (`node = node->next_0xC`) |
+| `func_80014514` | 15 | 17 | `0x18` | Stripped variadic debug `printf` stub (`void func_80014514(s32 fmt, ...) {}`) |
+| `func_80098898` | 12 | 16 | `0x50` | **`get_tile_city_owner(x, y)`** — returns tile owner if city present (`(flags & 0x42) == 0x42`), else `-1` |
+| `func_8007E4D4` | 12 | 15 | `0xA4` | **`refresh_unit_tile(unit_id)`** — bounds-checks `unit.x, unit.y` against map dimensions (`D_8011C308 x D_8011C30A`) and refreshes viewport |
+| `func_800DEEC4` | 10 | 15 | `0x40` | **`get_wonder_city(wonder_id)`** — returns city ID holding `wonder_id` from `D_8011A342[28]` if not destroyed |
+| `func_80089484` | 8 | 14 | `0x70` | **`city_record_seen_by_civ(city_id, civ_id)`** — sets `city.seen_mask \|= (1 << civ_id)` and latches `city.seen_size[civ_id] = city.size` |
 
 ---
 

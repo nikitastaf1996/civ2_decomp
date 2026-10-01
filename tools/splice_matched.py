@@ -14,8 +14,10 @@ KR_FUNCS = {
     "func_8009BB84", "func_800A0228", "func_800A03CC", "func_80094B70",
     "func_80094B10", "func_800A9088", "func_800D0814", "func_800D085C",
     "func_80084DC4", "func_800D0AC0", "func_800D07A0",
+    "func_8007B6A0", "func_8007B798", "func_80098848", "func_800B31E8",
+    "func_800B8C60",
 }
-RET_S32_FUNCS = {"func_800A8690", "func_800CEE9C", "func_800DD89C"}
+RET_S32_FUNCS = {"func_80018BF0", "func_800A8690", "func_800CEE9C", "func_800DD89C"}
 
 
 def splice_binary(binary: str):
@@ -53,23 +55,19 @@ def splice_binary(binary: str):
         if fn not in matched:
             defs[fn] = (ret, "")
     for fn, (opt, c) in matched.items():
-        m = re.search(rf"^([A-Za-z0-9_ *]+?)\b{fn}\(([^)]*)\)\s*\{{", c, flags=re.M)
+        m = re.search(rf"^([A-Za-z0-9_* \t]+?)\b{fn}\(([^)]*)\)\s*\{{", c, flags=re.M)
         ret = m.group(1).strip()
         params = m.group(2).strip()
         defs[fn] = (ret, params)
 
-    # First pass: collect all extern variable types across all matched functions.
-    # If a symbol has both unsigned and signed declarations of the same width (e.g. s16 vs u16),
-    # or if it is declared with different types across functions, alias conflicting declarations
-    # using GNU C `__asm__("SYM")` so every function gets the exact type it was matched with!
     sym_first_type = {}
     transformed = {}
-    for fn, (opt, c) in matched.items():
+    for fn, (opt, c) in sorted(matched.items()):
         c = re.sub(r"^extern\s+M2C_UNK\s+(func_[0-9A-F]{8});", r"M2C_UNK \1(); /* extern */", c, flags=re.M)
         c = re.sub(r"&(func_[0-9A-F]{8})\b", r"(void *)&\1", c)
-        c = re.sub(rf"^([A-Za-z0-9_ *]+?\b{fn})\(void\)\s*\{{", r"\1() {", c, flags=re.M)
+        c = re.sub(rf"^([A-Za-z0-9_* \t]+?\b{fn})\(void\)\s*\{{", r"\1() {", c, flags=re.M)
         if fn in KR_FUNCS:
-            m = re.search(rf"^([A-Za-z0-9_ *]+?\b{fn})\(([^)]+)\)\s*\{{", c, flags=re.M)
+            m = re.search(rf"^([A-Za-z0-9_* \t]+?\b{fn})\(([^)]+)\)\s*\{{", c, flags=re.M)
             if m and m.group(2).strip() != "void":
                 plist = [p.strip() for p in m.group(2).split(",")]
                 pnames = [re.search(r"\b(\w+)$", p).group(1) for p in plist]
@@ -81,30 +79,48 @@ def splice_binary(binary: str):
         body_lines = []
         in_body = False
         alias_map = {}
+
+        def fix_decl_line(l_str, indent="    "):
+            s = l_str.strip()
+            m_ext = re.match(r"^((?:M2C_UNK|void|s32|u32|s16|u16|s8|u8)[ \t*]+)\b(func_[0-9A-F]{8})\(([^)]*)\);(?:\s*/\* extern \*/)?$", s)
+            if m_ext:
+                callee = m_ext.group(2)
+                cargs = m_ext.group(3).strip()
+                if callee in defs:
+                    ret, dparams = defs[callee]
+                    if "..." in dparams:
+                        return f"{indent}{ret} {callee}({dparams});"
+                    if cargs:
+                        return f"{indent}{ret} {callee}({cargs});"
+                    return f"{indent}{ret} {callee}();"
+                return f"{indent}{s}"
+            m_var = re.match(r"^extern\s+(.+?)\b(D_[0-9A-F]{8})(\[[^\]]*\])?;$", s)
+            if m_var:
+                vtype = m_var.group(1).strip()
+                vsym = m_var.group(2)
+                varr = m_var.group(3) or ""
+                full_type = f"{vtype} {varr}".strip()
+                if vsym not in sym_first_type:
+                    sym_first_type[vsym] = full_type
+                    return f"{indent}extern {vtype} {vsym}{varr};"
+                elif sym_first_type[vsym] != full_type:
+                    alias = f"{vsym}__{fn}"
+                    alias_map[vsym] = alias
+                    return f'{indent}extern {vtype} {alias}{varr} __asm__("{vsym}");'
+                return f"{indent}extern {vtype} {vsym}{varr};"
+            return indent + s if not l_str.startswith(" ") else l_str
+
         for l in lines:
             if not in_body and (l.startswith("extern ") or l.endswith("/* extern */")):
-                m_ext = re.match(r"^([A-Za-z0-9_ *]+?)\b(\w+)\(\);\s*/\* extern \*/", l)
-                if m_ext:
-                    callee = m_ext.group(2)
-                    if callee in defs:
-                        ret, _ = defs[callee]
-                        l = f"{ret} {callee}();"
-                else:
-                    m_var = re.match(r"^extern\s+(.+?)\b(D_[0-9A-F]{8});$", l)
-                    if m_var:
-                        vtype = m_var.group(1).strip()
-                        vsym = m_var.group(2)
-                        if vsym not in sym_first_type:
-                            sym_first_type[vsym] = vtype
-                        elif sym_first_type[vsym] != vtype:
-                            alias = f"{vsym}__{fn}"
-                            alias_map[vsym] = alias
-                            l = f'extern {vtype} {alias} __asm__("{vsym}");'
-                ext_lines.append("    " + l)
+                ext_lines.append(fix_decl_line(l, "    "))
             else:
-                if in_body and alias_map:
-                    for orig_sym, alias_sym in alias_map.items():
-                        l = re.sub(rf"\b{orig_sym}\b", alias_sym, l)
+                if in_body:
+                    s = l.strip()
+                    if s.startswith("extern ") or re.match(r"^(?:M2C_UNK|void|s32|u32|s16|u16|s8|u8)[ \t*]+\bfunc_[0-9A-F]{8}\([^)]*\);$", s):
+                        l = fix_decl_line(l, "    ")
+                    elif alias_map:
+                        for orig_sym, alias_sym in alias_map.items():
+                            l = re.sub(rf"\b{orig_sym}\b", alias_sym, l)
                 body_lines.append(l)
                 if not in_body and l.endswith("{"):
                     in_body = True

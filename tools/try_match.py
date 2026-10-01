@@ -1,141 +1,138 @@
 #!/usr/bin/env python3
-"""Compile a C file with the project toolchain and compare every function in it
-byte-wise against the original (SLUS_007.92 or CIV2.EXE), with relocated
-fields masked and verified.
-
-usage: tools/try_match.py [--bin slus|civ2] [--opt FLAGS] draft.c [func ...]
+"""Compile a C file and diff its functions against the retail binary (SLUS_007.92 or CIV2.EXE).
+Usage: tools/try_match.py <c_file> [func_name ...] [--bin slus|civ2] [--opt FLAGS]
 """
-import sys, subprocess, struct, re, os, tempfile, glob
+import argparse
+import os
+import re
+import struct
+import subprocess
+import sys
+import tempfile
 from elftools.elf.elffile import ELFFile
 
 D = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-binary = "civ2"
-opt_flags = "-O2"
-args = sys.argv[1:]
-while args and args[0].startswith("--"):
-    if args[0] == "--bin":
-        binary = args[1]
-        args = args[2:]
-    elif args[0].startswith("--bin="):
-        binary = args[0].split("=", 1)[1]
-        args = args[1:]
-    elif args[0] == "--opt":
-        opt_flags = args[1]
-        args = args[2:]
-    elif args[0].startswith("--opt="):
-        opt_flags = args[0].split("=", 1)[1]
-        args = args[1:]
-    else:
-        break
 
-src = args[0]
-want = set(args[1:])
+ap = argparse.ArgumentParser()
+ap.add_argument("c_file")
+ap.add_argument("funcs", nargs="*")
+ap.add_argument("--bin", dest="binary", choices=["slus", "civ2"], default="civ2")
+ap.add_argument("--opt", dest="opt_flags", default="-O1")
+args = ap.parse_args()
+
+src = args.c_file
+want = set(args.funcs)
+binary = args.binary
+opt_flags = args.opt_flags
 
 exe_name = "SLUS_007.92" if binary == "slus" else "CIV2.EXE"
 ob = open(f"{D}/disks/us/{exe_name}", "rb").read()[0x800:]
 ovram = 0x80010000
 
 w = os.path.join(tempfile.mkdtemp(prefix="try_match_"), "draft")
-g_flag = "-G8"
-if "--opt" not in sys.argv and not any(a.startswith("--opt=") for a in sys.argv):
-    opt_flags = "-O1" if binary == "slus" else "-O2"
-cc1 = f"{D}/bin/gcc-2.7.2-psx/cc1 -quiet {opt_flags} {g_flag} -mips1 -mcpu=3000 -mgas -msoft-float -fgnu-linker -Wall -Wno-unused"
+cc1 = f"{D}/bin/gcc-2.7.2-psx/cc1 -quiet {opt_flags} -G8 -mips1 -mcpu=3000 -mgas -msoft-float -fgnu-linker -w"
 r1 = subprocess.run(
     f"mipsel-linux-gnu-cpp -P -undef -nostdinc -I{D}/include -I{D}/external/psyq_headers/psyq_lib47/include "
     f"-D_LANGUAGE_C -DLANGUAGE_C -D__GNUC__=2 -Dmips -D__mips__ -D__mips -Dpsx -D__psx__ -D__psx -D_PSYQ -D_MIPSEL -DVERSION_US -DSKIP_ASM {src} > {w}.i && "
-    f"{cc1} -o {w}.s {w}.i", shell=True, capture_output=True, text=True
+    f"{cc1} -o {w}.cc1.s {w}.i && "
+    f"python3 {D}/tools/maspsx_wrap.py --bin {binary} --c-file {src} --in-s {w}.cc1.s --out-s {w}.s && "
+    f"mipsel-linux-gnu-as -EL -march=r3000 -no-pad-sections -O1 -G0 -I{D} -I{D}/include -o {w}.o {w}.s",
+    shell=True,
+    capture_output=True,
+    text=True,
 )
 if r1.returncode:
-    print(r1.stderr); sys.exit(1)
-stxt = open(f"{w}.s").read()
-lo_gp, hi_gp = (0x80055250, 0x80055330) if binary == "slus" else (0x801584FC, 0x80159528)
-def filt_ext(m):
-    sym = m.group(1)
-    ma = re.match(r"D_([0-9A-F]{8})$", sym)
-    return m.group(0) if (ma and lo_gp <= int(ma.group(1), 16) <= hi_gp) else ""
-stxt = re.sub(r"^\s*\.extern\s+(\w+),\s*\d+\s*$", filt_ext, stxt, flags=re.M)
-open(f"{w}.s", "w").write(stxt)
-cmd = (
-    f"python3 {D}/external/maspsx/maspsx.py --aspsx-version=2.56 --expand-div -G8 < {w}.s > {w}.ms.s && "
-    f"mipsel-linux-gnu-as -EL -march=r3000 -no-pad-sections -O1 -G0 -I{D} -I{D}/include -o {w}.o {w}.ms.s"
-)
-r = subprocess.run(cmd, shell=True, capture_output=True, text=True)
-if r.returncode:
-    print(r.stderr)
+    print(r1.stderr)
     sys.exit(1)
 
-e = ELFFile(open(w + ".o", "rb"))
+e = ELFFile(open(f"{w}.o", "rb"))
 text = e.get_section_by_name(".text").data()
+symtab = e.get_section_by_name(".symtab")
 rel = {}
 rs = e.get_section_by_name(".rel.text")
 if rs:
-    rel = {x["r_offset"]: x for x in rs.iter_relocations()}
-symtab = e.get_section_by_name(".symtab")
-syms = sorted([(s["st_value"], s.name) for s in symtab.iter_symbols() if s["st_info"]["type"] == "STT_FUNC"])
+    for r in rs.iter_relocations():
+        s = symtab.get_symbol(r["r_info_sym"])
+        rel[r["r_offset"]] = (r["r_info_type"], s.name, s["st_info"]["bind"])
 
-symaddr = {}
-try:
-    for l in open(f"{D}/build/us/{exe_name}.map"):
-        m = re.match(r"\s+0x([0-9a-f]{8})\s+([A-Za-z_]\w*)\s*$", l)
-        if m:
-            symaddr.setdefault(m.group(2), int(m.group(1), 16))
-except OSError:
-    pass
+fn_offs = sorted(
+    (s["st_value"], s.name)
+    for s in symtab.iter_symbols()
+    if s["st_info"]["type"] == "STT_FUNC" and s["st_info"]["bind"] == "STB_GLOBAL"
+)
+asm_dir = f"{D}/asm/us/{binary}/nonmatchings/game"
 
-def addr_of(n):
-    m = re.match(r"(?:D|func|jtbl)_([0-9A-F]{8})$", n)
-    return int(m.group(1), 16) if m else symaddr.get(n)
-
-def reloc_bad(o, word, line):
-    r = rel[o]
-    t = r["r_info_type"]
-    n = symtab.get_symbol(r["r_info_sym"]).name
-    want_sym = re.findall(r"%(?:lo|gp_rel)\((\w+)\)", line) if t in (6, 7) else re.findall(r"jal\s+(\w+)", line) if t == 4 else []
-    if not n or not want_sym:
-        return False
-    a, b = addr_of(n), addr_of(want_sym[0])
-    if a is None or b is None:
-        return n != want_sym[0]
-    if t == 6:
-        a += (word & 0xffff) - ((word & 0x8000) << 1)
-    return a != b
-
-dis = subprocess.run(["mipsel-linux-gnu-objdump", "-d", "-z", "--no-show-raw-insn", w + ".o"], capture_output=True, text=True).stdout
-mine = {}
-for l in dis.splitlines():
-    m = re.match(r"\s+([0-9a-f]+):\s+(.*)", l)
-    if m:
-        mine[int(m.group(1), 16)] = re.sub(r"\s+", " ", m.group(2)).strip()
-
-for i, (off, name) in enumerate(syms):
+any_diff = False
+for idx, (off, name) in enumerate(fn_offs):
     if want and name not in want:
         continue
-    found = glob.glob(f"{D}/asm/us/{binary}/*matchings/**/{name}.s", recursive=True)
-    if not found:
+    end = fn_offs[idx + 1][0] if idx + 1 < len(fn_offs) else len(text)
+    while end > off and text[end - 4 : end] == b"\0\0\0\0":
+        end -= 4
+    cand = text[off:end]
+    sf = os.path.join(asm_dir, f"{name}.s")
+    if not os.path.exists(sf):
+        print(f"{name}: no .s file at {sf}")
+        any_diff = True
         continue
-    asm = found[0]
-    t = open(asm).read()
-    size = int(re.search(r"nonmatching " + name + r", 0x([0-9A-F]+)", t).group(1), 16)
-    addr = int(re.search(r"glabel " + name + r"\n\s+/\* [0-9A-F]+ ([0-9A-F]{8}) ", t).group(1), 16)
-    end = syms[i + 1][0] if i + 1 < len(syms) else len(text)
-    body = t[t.index("glabel " + name + "\n"):]
-    body = body[:body.index("endlabel " + name + "\n")] if "endlabel " + name + "\n" in body else body
-    tl = [re.sub(r"\s+", " ", re.sub(r".*\*/\s+", "", l)).strip() for l in body.splitlines() if re.match(r"\s+/\*", l)]
-    nd = 0
-    rows = []
-    for k in range(max(size, end - off) // 4):
-        o = off + 4 * k
-        a = struct.unpack("<I", text[o:o+4])[0] if o < end else None
-        b = struct.unpack("<I", ob[addr - ovram + 4 * k:][:4])[0] if 4 * k < size else None
-        rbad = False
-        if a is not None and b is not None and o in rel:
-            rbad = k < len(tl) and reloc_bad(o, a, tl[k])
-            mk = 0xfc000000 if (a >> 26) in (2, 3) else 0xffff0000
-            a &= mk
-            b &= mk
-        bad = a != b or rbad
-        nd += bad
-        rows.append(f"{'**' if bad else '  '} {mine.get(o, '') if o < end else '':38s}| {tl[k] if k < len(tl) else ''}")
-    print(f"{name}: {'MATCH' if nd == 0 else str(nd) + ' diffs'} (size {end - off:#x} vs {size:#x})")
+    st = open(sf).read()
+    m = re.search(r"/\* [0-9A-F]+ ([0-9A-F]{8}) ", st)
+    addr = int(m.group(1), 16)
+    tl = [
+        re.sub(r"\s+", " ", re.sub(r".*\*/\s+", "", l)).strip()
+        for l in st.splitlines()
+        if "/*" in l and not l.startswith(".set")
+    ]
+    tsize = len(tl) * 4
+    while len(cand) < tsize and off + len(cand) < len(text):
+        cand += text[off + len(cand) : off + len(cand) + 4]
+    dl = [
+        l.split("\t", 2)[2]
+        for l in subprocess.check_output(
+            [
+                "mipsel-linux-gnu-objdump",
+                "-d",
+                f"--start-address={off}",
+                f"--stop-address={off + len(cand)}",
+                f"{w}.o",
+            ],
+            text=True,
+        ).splitlines()
+        if re.match(r"^\s*[0-9a-f]+:\t", l)
+    ]
+    n = max(len(cand), tsize) // 4
+    diffs = []
+    for k in range(n):
+        ca = struct.unpack_from("<I", cand, 4 * k)[0] if 4 * k < len(cand) else None
+        ta = (
+            struct.unpack_from("<I", ob, addr - ovram + 4 * k)[0]
+            if 4 * k < tsize
+            else None
+        )
+        same = ca is not None and ta is not None
+        if same and (off + 4 * k) in rel:
+            rtype, sym_name, sym_bind = rel[off + 4 * k]
+            tl_k = tl[k] if k < len(tl) else ""
+            if rtype == 7 and "%gp_rel(" not in tl_k:
+                same = False
+            elif rtype in (5, 6) and "%gp_rel(" in tl_k:
+                same = False
+            else:
+                mk = 0xFC000000 if (ca >> 26) in (2, 3) else 0xFFFF0000
+                same = (ca & mk) == (ta & mk)
+                if same and sym_bind == "STB_GLOBAL" and sym_name not in tl_k:
+                    same = False
+        elif same:
+            same = ca == ta
+        diffs.append(
+            (same, dl[k].expandtabs(1) if k < len(dl) else "", tl[k] if k < len(tl) else "")
+        )
+    nd = sum(not s for s, _, _ in diffs)
+    print(f"{name}: {'MATCH' if nd == 0 else f'{nd} diffs'} (size {len(cand):#x} vs {tsize:#x})")
     if nd:
-        print("\n".join(rows))
+        any_diff = True
+        for s, c_s, t_s in diffs:
+            print(f"{'  ' if s else '**'} {c_s:<38} | {t_s}")
+
+if any_diff:
+    sys.exit(1)
