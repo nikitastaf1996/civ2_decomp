@@ -16,6 +16,12 @@ KR_FUNCS = {
     "func_80084DC4", "func_800D0AC0", "func_800D07A0",
     "func_8007B6A0", "func_8007B798", "func_80098848", "func_800B31E8",
     "func_800B8C60",
+    # Called with fewer arguments than it reads: some call sites leave $a1-$a3
+    # untouched, which only a K&R-style definition accepts.
+    "func_80098324",
+    # Various call sites invoke it with no arguments (the callee then reads the
+    # incoming $a0), which only a K&R-style definition accepts.
+    "func_80095DF0",
 }
 RET_S32_FUNCS = {"func_80018BF0", "func_800A8690", "func_800CEE9C", "func_800DD89C"}
 
@@ -86,6 +92,39 @@ def splice_binary(binary: str):
         ret = m.group(1).strip()
         params = m.group(2).strip()
         defs[fn] = (ret, params)
+
+    # Make pre-existing declarations of the functions we are about to splice agree with
+    # their definitions.  A caller that declares `M2C_UNK func_X();` while the function is
+    # later defined as `void func_X(s32, ...)` is rejected under C89 ("conflicting types"),
+    # and only the definition can be considered authoritative.
+    for fn, (opt, c) in matched.items():
+        m = re.search(rf"^([A-Za-z0-9_* \t]+?)\b{fn}\(([^)]*)\)\s*\{{\s*$", c, flags=re.M)
+        if not m:
+            continue
+        new_ret = m.group(1).strip()
+        # Deliberately left unprototyped: some call sites legitimately pass fewer arguments
+        # than the function reads (the MIPS O32 ABI leaves the rest of $a0-$a3 untouched),
+        # which an unprototyped declaration permits while keeping the caller's codegen intact.
+        decl_re = re.compile(
+            rf"^([ \t]*)(?:M2C_UNK|void|s32|u32|s16|u16|s8|u8)[ \t*]+\b{fn}\([^)]*\);(?:[ \t]*/\* extern \*/)?$",
+            re.M,
+        )
+        game_c = decl_re.sub(
+            lambda mm, r=new_ret, f=fn: f"{mm.group(1)}{r} {f}();", game_c
+        )
+
+    # Drafts may be written with the whole function on one line.  The code below relies on
+    # the definition's opening brace ending its line (that is where the collected externs
+    # get injected), so expand single-line bodies here.
+    def expand_body(c):
+        return re.sub(
+            r"^([^\n]*\bfunc_[0-9A-F]{8}\s*\([^)]*\)\s*\{)[ \t]*(?=\S)",
+            r"\1\n    ",
+            c,
+            flags=re.M,
+        )
+
+    matched = {fn: (opt, expand_body(c)) for fn, (opt, c) in matched.items()}
 
     sym_first_type = {}
     transformed = {}

@@ -286,6 +286,8 @@ void func_8001A1B8() {
 
 /* @CFLAGS: -O1 -G0 */
 
+/* @CFLAGS: -O1 -G0 */
+
 void func_8001A20C() {
     M2C_UNK GsDefDispBuff2(M2C_UNK, M2C_UNK, M2C_UNK, M2C_UNK); /* extern */
     M2C_UNK GsInitGraph2(M2C_UNK, M2C_UNK, M2C_UNK, M2C_UNK, s32); /* extern */
