@@ -449,13 +449,50 @@ void func_8001B4E4() {
     func_8001B488(0x2E);
 }
 
-INCLUDE_ASM("asm/us/slus/nonmatchings/game", func_8001B504);
+void func_8001B504(u8 *arg0, u8 *arg1, s32 arg2) {
+    s32 i;
+    for (i = 0; i < arg2; i++) {
+        arg1[i] = arg0[i];
+    }
+}
 
-INCLUDE_ASM("asm/us/slus/nonmatchings/game", func_8001B540);
+s32 func_8001B540(s32 arg0, u8 *arg1, s32 arg2) {
+    s32 i;
+    i = 0;
+    while (i < arg2) {
+        if (arg1[i] == (arg0 & 0xFF)) {
+            return 1;
+        }
+        i++;
+    }
+    return 0;
+}
 
-INCLUDE_ASM("asm/us/slus/nonmatchings/game", func_8001B588);
+u8 *func_8001B588(s32 arg0, u8 *arg1, s32 arg2) {
+    s32 i;
+    i = 0;
+    while (i < arg2) {
+        if (*arg1 == (arg0 & 0xFF)) {
+            break;
+        }
+        i++;
+        arg1--;
+    }
+    return arg1;
+}
 
-INCLUDE_ASM("asm/us/slus/nonmatchings/game", func_8001B5C8);
+u8 *func_8001B5C8(s32 arg0, u8 *arg1, s32 arg2) {
+    s32 i;
+    i = 0;
+    while (i < arg2) {
+        if (*arg1 == (arg0 & 0xFF)) {
+            break;
+        }
+        i++;
+        arg1++;
+    }
+    return arg1;
+}
 
 void func_8001B608(s8 *arg0, s32 arg1) {
     s32 var_a1;
@@ -1934,7 +1971,14 @@ void func_8002B520() {
 
 }
 
-INCLUDE_ASM("asm/us/slus/nonmatchings/game", func_8002B528);
+
+
+void func_8002B528(s32 arg0, s32 arg1) {
+    extern s8 D_800172BC;
+    s32 sprintf(); /* extern */
+    s8 buf[0x18];
+    sprintf(buf, &D_800172BC, arg0, arg1);
+}
 
 void func_8002B558() {
 

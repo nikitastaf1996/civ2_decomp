@@ -6,11 +6,11 @@ Both retail PS-X executables on the disc are split, rebuilt from C + assembly, a
 
 | Executable | Role | Retail Size | SHA-1 | Game Functions | PsyQ 4.2 SDK Symbols | Matched C Functions | Total Accounted |
 | :--- | :--- | :---: | :--- | :---: | :---: | :---: | :---: |
-| **`SLUS_007.92`** | Title / Setup / Intro Movie Player | 290,816 B (`0x47000`) | `362a030a231fc5952010909faf848a8a461bbb3c` | 208 | 375 | **83 / 208 (39.9%)** | **458 / 583 (78.6%)** |
+| **`SLUS_007.92`** | Title / Setup / Intro Movie Player | 290,816 B (`0x47000`) | `362a030a231fc5952010909faf848a8a461bbb3c` | 208 | 375 | **88 / 208 (42.3%)** | **463 / 583 (79.4%)** |
 | **`CIV2.EXE`** | Main Strategy Game Engine | 1,351,680 B (`0x14A000`) | `919bad81720f9b0e129fd5f10fb155cd7aa3c98c` | 1,427 | 390 | **631 / 1,427 (44.2%)** | **1,021 / 1,817 (56.2%)** |
-| **Combined** | **Full Game** | **1,642,496 B** | **100% Byte-Identical** | **1,635** | **765** | **714 / 1,635 (43.7%)** | **1,479 / 2,400 (61.6%)** |
+| **Combined** | **Full Game** | **1,642,496 B** | **100% Byte-Identical** | **1,635** | **765** | **719 / 1,635 (44.0%)** | **1,484 / 2,400 (61.8%)** |
 
-*(Note: 712 of the 714 matched C functions are spliced directly into `src/slus/game.c` and `src/civ2/game.c`; 2 jump-table functions in `CIV2.EXE` — `func_800916F0` and `func_80094298` — also match 100% and await `.rodata` jump-table migration.)*
+*(Note: 717 of the 719 matched C functions are spliced directly into `src/slus/game.c` and `src/civ2/game.c`; 2 jump-table functions in `CIV2.EXE` — `func_800916F0` and `func_80094298` — also match 100% and await `.rodata` jump-table migration.)*
 
 ---
 
@@ -85,8 +85,9 @@ Idioms that have resolved other near-misses (re-apply before rewriting logic):
 6. **One variable, two roles**: reusing the same local first for a function result and later as a loop counter makes cc1 place it in a callee-saved register (live across the calls), which is the shape `func_8007D62C` needs; a separate temporary lands in `$v1` instead.
 7. **Signed store of `-1`**: storing `-1` through an `s8 *` emits `addiu $v0,$zero,-1`, while storing it through a `u8 *` emits `li v0,255` — the exact difference that matched `func_8002E690`.
 8. **Early `return arg0;` merges epilogues**: for `x == 0 → return arg0; else shift`-shaped functions the retail code keeps one shared `jr $ra` with the value already moved into `$v0`; writing the early return instead of a `var = arg0` initialization reproduces it (`func_800B4514`, `func_800CEF38`'s remaining diff).
-9. **Nested `if`s instead of `&&` defeats range-check folding**: cc1 rewrites `a < 0xD3 && a >= 0xD0` into `(u32)(a - 0xD0) < 3` (one `sltiu`), but the retail code keeps two separate `slti`s. Writing the outer test first and nesting the inner one (`if (a < 0xD3) { if (a >= 0xD0) ... }`) preserves the retail shape — this is what matched `func_800C82B4`.
-10. **Prototype-less callees promote arguments**: `void f();` makes cc1 widen short arguments at the call site, which changes the caller's codegen.
+9. **Hoisted mask position is visible**: writing `arg0 &= 0xFF;` before a loop puts the `andi` before the loop's signed pre-check (`blez`); writing the mask inline in the comparison (`if (*p == (arg0 & 0xFF))`) lets cc1 hoist it *after* the pre-check instead — the retail shape (matched `func_8001B588`/`func_8001B5C8`/`func_8001B540` in `SLUS_007.92`).
+10. **Nested `if`s instead of `&&` defeats range-check folding**: cc1 rewrites `a < 0xD3 && a >= 0xD0` into `(u32)(a - 0xD0) < 3` (one `sltiu`), but the retail code keeps two separate `slti`s. Writing the outer test first and nesting the inner one (`if (a < 0xD3) { if (a >= 0xD0) ... }`) preserves the retail shape — this is what matched `func_800C82B4`.
+11. **Prototype-less callees promote arguments**: `void f();` makes cc1 widen short arguments at the call site, which changes the caller's codegen.
 
 ---
 
