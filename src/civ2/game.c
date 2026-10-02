@@ -68,7 +68,15 @@ void func_8001440C() {
     func_80014514(&D_8001007C, var_v0 >> 0xA);
 }
 
-INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_80014448);
+
+typedef struct { s8 f0; s8 f1; s8 f2; s8 f3; s8 f4; } S5c;
+
+s32 func_80014448(s32 arg0, s32 arg1) {
+    extern s8 D_801584F4;
+    S5c buf;
+    buf = *(S5c *)&D_801584F4;
+    return (arg0 & ((u8 *)&buf)[arg1]) == 0;
+}
 
 void func_8001448C() {
 
@@ -1138,7 +1146,15 @@ INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_80067A3C);
 
 INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_80067D58);
 
-INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_80067F34);
+
+s32 func_80067F34(s32 arg0, s32 arg1, s32 arg2) {
+    extern u8 D_8011A272;
+    s32 i;
+    for (i = 0; i <= arg0; i++) {
+        arg2 += i * (7 - D_8011A272);
+    }
+    return arg2 / 2 + 1;
+}
 
 INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_80067F78);
 
