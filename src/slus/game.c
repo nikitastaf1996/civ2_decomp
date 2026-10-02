@@ -284,7 +284,28 @@ void func_8001A1B8() {
     DrawSync(0);
 }
 
-INCLUDE_ASM("asm/us/slus/nonmatchings/game", func_8001A20C);
+/* @CFLAGS: -O1 -G0 */
+
+void func_8001A20C() {
+    M2C_UNK GsDefDispBuff2(M2C_UNK, M2C_UNK, M2C_UNK, M2C_UNK); /* extern */
+    M2C_UNK GsInitGraph2(M2C_UNK, M2C_UNK, M2C_UNK, M2C_UNK, s32); /* extern */
+    M2C_UNK GsSetOrign(M2C_UNK, M2C_UNK);               /* extern */
+    void func_8001A1B8();
+    extern s32 D_80056530;
+    extern s32 D_80056538;
+    extern M2C_UNK D_800CC1F8;
+    extern M2C_UNK D_80173740;
+    func_8001A1B8();
+    GsInitGraph2(0x140, 0xF0, 4, 0, 0);
+    GsDefDispBuff2(0, 0, 0x140, 0);
+    M2C_FIELD(&D_800CC1F8, s32 *, 0) = 0xB;
+    M2C_FIELD(&D_800CC1F8, M2C_UNK **, 4) = &D_80173740;
+    M2C_FIELD(&D_800CC1F8, s32 *, 0x14) = 0xB;
+    M2C_FIELD(&D_800CC1F8, void **, 0x18) = (void *) ((void *)&D_80173740 + 0x2000);
+    D_80056530 = 0;
+    D_80056538 = 0;
+    GsSetOrign(0, 0);
+}
 
 INCLUDE_ASM("asm/us/slus/nonmatchings/game", func_8001A29C);
 

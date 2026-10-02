@@ -57,26 +57,39 @@ def main():
     args = ap.parse_args()
 
     c_text = open(args.c_file).read()
-    o2_funcs = set(re.findall(r"/\*\s*@O2\s*\*/\s*\n(?:[A-Za-z0-9_ *]+?\b)(func_[0-9A-F]{8})\b", c_text))
+
+    # Per-function flag overrides.  `/* @O2 */` is the historical spelling and means
+    # `-O2 -G8`; `/* @CFLAGS: <flags> */` supports any other cc1 flag set (e.g. `-O1 -G0`).
+    flag_map = {}
+    for m in re.finditer(r"/\*\s*@O2\s*\*/\s*\n(?:[A-Za-z0-9_ *]+?\b)(func_[0-9A-F]{8})\b", c_text):
+        flag_map[m.group(1)] = "-O2 -G8"
+    for m in re.finditer(r"/\*\s*@CFLAGS:\s*([-0-9A-Za-z .]+?)\s*\*/\s*\n(?:[A-Za-z0-9_ *]+?\b)(func_[0-9A-F]{8})\b", c_text):
+        flag_map[m.group(2)] = m.group(1).strip()
 
     s_lines = open(args.in_s).read().splitlines()
     blocks, base_lines = extract_ent_blocks(s_lines)
 
-    if o2_funcs:
+    by_flags = {}
+    for fn, flags in flag_map.items():
+        by_flags.setdefault(flags, set()).add(fn)
+
+    if by_flags:
         cc1 = os.path.join(ROOT, "bin", "gcc-2.7.2-psx", "cc1")
         inc = os.path.join(ROOT, "include")
-        cmd = (
-            f"mipsel-linux-gnu-cpp -P -undef -Wall -lang-c -nostdinc -I{inc} "
-            f"-D_LANGUAGE_C -DLANGUAGE_C -D__GNUC__=2 -Dmips -D__mips__ -D__mips "
-            f"-Dpsx -D__psx__ -D__psx -D_PSYQ -D_MIPSEL -DVERSION_US {args.c_file} | "
-            f"{cc1} -quiet -w -O2 -G8 -mips1 -mcpu=3000 -mgas -msoft-float -fgnu-linker -o - -"
-        )
-        r = subprocess.run(cmd, shell=True, capture_output=True, text=True, check=True)
-        o2_asm = re.sub(r"\$L(\d+)\b", r"$LO2_\1", r.stdout)
-        o2_blocks, _ = extract_ent_blocks(o2_asm.splitlines())
-        for fn in o2_funcs:
-            if fn in o2_blocks:
-                blocks[fn] = o2_blocks[fn]
+        for tag, (flags, fns) in enumerate(sorted(by_flags.items())):
+            cmd = (
+                f"mipsel-linux-gnu-cpp -P -undef -Wall -lang-c -nostdinc -I{inc} "
+                f"-D_LANGUAGE_C -DLANGUAGE_C -D__GNUC__=2 -Dmips -D__mips__ -D__mips "
+                f"-Dpsx -D__psx__ -D__psx -D_PSYQ -D_MIPSEL -DVERSION_US {args.c_file} | "
+                f"{cc1} -quiet -w {flags} -mips1 -mcpu=3000 -mgas -msoft-float -fgnu-linker -o - -"
+            )
+            r = subprocess.run(cmd, shell=True, capture_output=True, text=True, check=True)
+            # Rename local labels so that alternate-flag blocks cannot collide with the base TU.
+            alt_asm = re.sub(r"\$L(\d+)\b", rf"$LALT{tag}_\1", r.stdout)
+            alt_blocks, _ = extract_ent_blocks(alt_asm.splitlines())
+            for fn in fns:
+                if fn in alt_blocks:
+                    blocks[fn] = alt_blocks[fn]
 
     annotated_lines = []
     for line in base_lines:

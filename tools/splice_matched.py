@@ -19,6 +19,13 @@ KR_FUNCS = {
 }
 RET_S32_FUNCS = {"func_80018BF0", "func_800A8690", "func_800CEE9C", "func_800DD89C"}
 
+# Helpers that earlier batches had typed `void`, but which newly spliced callers
+# read a value from.  Only the declaration is widened; bodies are left untouched.
+PROMOTE_TO_S32 = {
+    "civ2": ["func_80070A90"],
+    "slus": [],
+}
+
 
 def splice_binary(binary: str):
     matched = pickle.load(open(f"/tmp/matched_{binary}.pkl", "rb"))
@@ -39,21 +46,41 @@ def splice_binary(binary: str):
             opt, c = matched["func_80098494"]
             c = re.sub(r"^u8\s+func_80098494\b", "s32 func_80098494", c, flags=re.M)
             matched["func_80098494"] = (opt, c)
-        for fn in ["func_80015A14", "func_80098354"]:
+        for fn in ["func_80015A14", "func_80098354", "func_8008658C"]:
             if fn in matched:
                 opt, c = matched[fn]
-                c = re.sub(r"(?<!u8 )\*\s*func_800982F4\(", "*(u8 *)func_800982F4(", c)
-                matched[fn] = (opt, c)
+                fixed = []
+                for line in c.splitlines():
+                    # Leave the prototype itself alone; only rewrite real dereferences.
+                    if re.match(r"^\s*(?:M2C_UNK|void|s32|u32|s16|u16|s8|u8)\s*\*?\s*func_800982F4\s*\(", line):
+                        fixed.append(line)
+                    else:
+                        fixed.append(re.sub(r"(?<![\w)])\*\s*func_800982F4\(", "*(u8 *)func_800982F4(", line))
+                matched[fn] = (opt, "\n".join(fixed))
 
     game_c_path = os.path.join(ROOT, "src", binary, "game.c")
     game_c = open(game_c_path).read()
 
+    # Newly spliced callers read $v0 from these helpers, which earlier batches had
+    # declared as `void`.  Only the declaration changes; the bodies are untouched,
+    # so the already-verified codegen is unaffected.  Done before `defs` is built so
+    # that both the definitions and the per-function declarations pick up the type.
+    for fn in PROMOTE_TO_S32[binary]:
+        game_c = re.sub(rf"\bvoid\s+({fn}\s*\()", r"s32 \1", game_c)
+
     defs = {}
-    for m in re.finditer(r"^((?:void|s32|u32|s16|u16|s8|u8)\s+)(func_[0-9A-F]{8})\(void\)", game_c, flags=re.M):
+    for m in re.finditer(
+        r"^((?:void|s32|u32|s16|u16|s8|u8)\s+)(func_[0-9A-F]{8})\(([^)]*)\)\s*\{?",
+        game_c,
+        flags=re.M,
+    ):
         ret = m.group(1).strip()
         fn = m.group(2)
+        params = m.group(3).strip()
+        if params == "void":
+            params = ""
         if fn not in matched:
-            defs[fn] = (ret, "")
+            defs[fn] = (ret, params)
     for fn, (opt, c) in matched.items():
         m = re.search(rf"^([A-Za-z0-9_* \t]+?)\b{fn}\(([^)]*)\)\s*\{{", c, flags=re.M)
         ret = m.group(1).strip()
@@ -90,9 +117,20 @@ def splice_binary(binary: str):
                     ret, dparams = defs[callee]
                     if "..." in dparams:
                         return f"{indent}{ret} {callee}({dparams});"
-                    if cargs:
-                        return f"{indent}{ret} {callee}({cargs});"
-                    return f"{indent}{ret} {callee}();"
+                    n_def = len([p for p in dparams.split(",") if p.strip()]) if dparams else 0
+                    n_call = len([p for p in cargs.split(",") if p.strip()]) if cargs else 0
+                    if n_call > n_def:
+                        # This call passes more arguments than the callee's own definition
+                        # declares (legal at the ABI level; the callee ignores them), and
+                        # GNU C rejects two such declarations for the same external name.
+                        # Bind an alias to the same symbol instead, and rename the calls.
+                        alias = f"{callee}__{fn}"
+                        alias_map[callee] = alias
+                        return f'{indent}{ret} {alias}({cargs}) __asm__("{callee}");'
+                    # The callee is defined elsewhere in this file, so its own parameter
+                    # list is authoritative: reusing the call-site's types here is what
+                    # produces "conflicting types for ..." errors.
+                    return f"{indent}{ret} {callee}({dparams});" if dparams else f"{indent}{ret} {callee}();"
                 return f"{indent}{s}"
             m_var = re.match(r"^extern\s+(.+?)\b(D_[0-9A-F]{8})(\[[^\]]*\])?;$", s)
             if m_var:
@@ -126,8 +164,11 @@ def splice_binary(binary: str):
                     in_body = True
                     body_lines.extend(ext_lines)
         c_final = "\n".join(body_lines)
-        if "-O2" in opt:
+        opt_flags = opt.strip()
+        if opt_flags == "-O2 -G8":
             c_final = "/* @O2 */\n" + c_final
+        elif opt_flags != "-O1 -G8":
+            c_final = f"/* @CFLAGS: {opt_flags} */\n" + c_final
         transformed[fn] = c_final
 
     if '#include "m2c_macros.h"' not in game_c:

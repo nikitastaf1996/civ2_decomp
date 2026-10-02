@@ -6,11 +6,11 @@ Both retail PS-X executables on the disc are split, rebuilt from C + assembly, a
 
 | Executable | Role | Retail Size | SHA-1 | Game Functions | PsyQ 4.2 SDK Symbols | Matched C Functions | Total Accounted |
 | :--- | :--- | :---: | :--- | :---: | :---: | :---: | :---: |
-| **`SLUS_007.92`** | Title / Setup / Intro Movie Player | 290,816 B (`0x47000`) | `362a030a231fc5952010909faf848a8a461bbb3c` | 208 | 375 | **82 / 208 (39.4%)** | **457 / 583 (78.4%)** |
-| **`CIV2.EXE`** | Main Strategy Game Engine | 1,351,680 B (`0x14A000`) | `919bad81720f9b0e129fd5f10fb155cd7aa3c98c` | 1,427 | 390 | **594 / 1,427 (41.6%)** | **984 / 1,817 (54.2%)** |
-| **Combined** | **Full Game** | **1,642,496 B** | **100% Byte-Identical** | **1,635** | **765** | **676 / 1,635 (41.3%)** | **1,441 / 2,400 (60.0%)** |
+| **`SLUS_007.92`** | Title / Setup / Intro Movie Player | 290,816 B (`0x47000`) | `362a030a231fc5952010909faf848a8a461bbb3c` | 208 | 375 | **83 / 208 (39.9%)** | **458 / 583 (78.6%)** |
+| **`CIV2.EXE`** | Main Strategy Game Engine | 1,351,680 B (`0x14A000`) | `919bad81720f9b0e129fd5f10fb155cd7aa3c98c` | 1,427 | 390 | **600 / 1,427 (42.0%)** | **990 / 1,817 (54.5%)** |
+| **Combined** | **Full Game** | **1,642,496 B** | **100% Byte-Identical** | **1,635** | **765** | **683 / 1,635 (41.8%)** | **1,448 / 2,400 (60.3%)** |
 
-*(Note: 674 of the 676 matched C functions are spliced directly into `src/slus/game.c` and `src/civ2/game.c`; 2 jump-table functions in `CIV2.EXE` — `func_800916F0` and `func_80094298` — also match 100% and await `.rodata` jump-table migration.)*
+*(Note: 681 of the 683 matched C functions are spliced directly into `src/slus/game.c` and `src/civ2/game.c`; 2 jump-table functions in `CIV2.EXE` — `func_800916F0` and `func_80094298` — also match 100% and await `.rodata` jump-table migration.)*
 
 ---
 
@@ -106,8 +106,60 @@ Using `tools/callgraph_impact.py`, all unmatched functions in `SLUS_007.92` and 
 
 ---
 
+### 5. Per-Function Compiler-Flag Overrides (`@CFLAGS`)
+
+Functions in a single translation unit are not all built with the same flags. `maspsx_wrap.py`
+already re-compiled individual functions at `-O2 -G8` when they carried a `/* @O2 */`
+annotation; this is now generalised to any flag set via `/* @CFLAGS: <flags> */`:
+
+```c
+/* @CFLAGS: -O1 -G0 */
+s32 func_8006A9B8(s32 arg0, s32 arg1) { ... }
+```
+
+The wrapper re-runs `cc1` over the whole translation unit once per distinct flag set, extracts
+only the annotated `.ent`/`.end` blocks (renaming local `$L` labels per set to avoid collisions)
+and substitutes them at their original definition sites. Sweeping the *unmatched* functions
+across a wider flag matrix (`-O1/-O2/-O3` × `-G0/-G4/-G8`, plus `-fomit-frame-pointer`,
+`-fstrength-reduce`) found **7 further functions that were previously assumed unreachable** —
+6 at `-O1 -G0`/`-O2 -G0` and 1 in `SLUS_007.92` at `-O1 -G0` — which is why the sweep now
+exposes `--opts` and `--only-file`. These functions never touch `$gp`, so they must be compiled
+without the `-G8` small-data threshold that the rest of the file uses.
+
+### 6. Automated Matching Pipeline
+
+The end-to-end sweep is three stages, all re-runnable:
+
+```bash
+python3 tools/gen_m2c_cache.py --jobs 8           # m2c over every nonmatching .s -> /tmp/m2c_cache_*.pkl
+python3 tools/auto_match_sweep.py \
+    --bin civ2 --only-file /tmp/unmatched_civ2.txt \
+    --opts="-O1 -G8" --opts="-O2 -G8" --opts="-O1 -G0" --opts="-O2 -G0" \
+    --out /tmp/matched_civ2.pkl                   # compile + byte-compare, keep 100% matches
+python3 tools/splice_matched.py                   # splice verified bodies into src/*/game.c
+make -j$(nproc) && make compare                   # the only result that counts
+```
+
+`tools/m2c_postprocess.py` holds the shared m2c output normalisation (exact `%lo` access-type
+inference, byte-stride global pointer arithmetic, missing leading argument padding) used by the
+sweep. Splicing a new batch surfaces the usual C89 declaration hazards, all of which the splicer
+now repairs automatically rather than per function:
+
+* a call site declaring a callee with different parameter types than the callee's own
+  definition in the same translation unit (`conflicting types for ...`) — the definition wins;
+* a call passing *more* arguments than the callee's definition declares — legal at the MIPS O32
+  level, but illegal to express twice in C89, so the call gets a local alias bound to the same
+  symbol with `__asm__("func_XXXXXXXX")`;
+* helpers that earlier batches typed `void` but which new callers read `$v0` from
+  (`void value not ignored as it ought to be`) — declaration widened, body untouched.
+
 ## Building & Verifying
 
+0. Fetch the toolchain (GCC 2.7.2 PSX `cc1`, MIPS binutils, Python packages) and unpack the disc:
+   ```bash
+   tools/setup_toolchain.sh
+   tools/extract_disc.sh "/path/to/Civilization II (USA).cue"   # verifies SHA-1s
+   ```
 1. Place retail `SLUS_007.92` and `CIV2.EXE` in `disks/us/` and the `gcc-2.7.2-psx` binary in `bin/gcc-2.7.2-psx/cc1`.
 2. Build both executables and verify 100% byte-for-byte identity:
    ```bash

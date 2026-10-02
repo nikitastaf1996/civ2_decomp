@@ -4,96 +4,8 @@ from elftools.elf.elffile import ELFFile
 
 D = "/home/user/civ2_decomp"
 
-OP_TO_TYPE = {
-    "lbu": "u8",
-    "lb": "s8",
-    "sb": "s8",
-    "lhu": "u16",
-    "lh": "s16",
-    "sh": "s16",
-    "lw": "s32",
-    "sw": "s32",
-}
+from m2c_postprocess import OP_TO_TYPE, enhance_c, replace_deref_add
 
-def replace_deref_add(c, sym_lo_type):
-    # Find all occurrences of `*(` where the balanced parentheses contain `&D_XXXXXXXX`
-    out = []
-    i = 0
-    n = len(c)
-    while i < n:
-        idx = c.find("*(", i)
-        if idx == -1:
-            out.append(c[i:])
-            break
-        out.append(c[i:idx])
-        # Find matching ')' for '*(' at idx+1
-        depth = 0
-        j = idx + 1
-        while j < n:
-            if c[j] == "(":
-                depth += 1
-            elif c[j] == ")":
-                depth -= 1
-                if depth == 0:
-                    break
-            j += 1
-        if j >= n:
-            out.append(c[idx:])
-            break
-        inner = replace_deref_add(c[idx+2:j], sym_lo_type)
-        # Only match &D_XXXXXXXX that is NOT already preceded by (s8 *)
-        m_sym = re.search(r"(?<!\*)&(D_[0-9A-F]{8})\b", inner)
-        if m_sym and "+" in inner:
-            sym = m_sym.group(1)
-            t = sym_lo_type.get(sym, "s32")
-            inner_fixed = re.sub(r"(?<!\*)&(D_[0-9A-F]{8})\b", r"((s8 *)&\1)", inner)
-            out.append(f"*({t} *)({inner_fixed})")
-        else:
-            out.append(f"*({inner})")
-        i = j + 1
-    return "".join(out)
-
-def enhance_c(binary, name, f, raw_c):
-    asm_txt = open(f).read() if os.path.exists(f) else ""
-    # Exact restore of raw m2c output:
-    c = raw_c.replace("*(s32 *)((s8 *)&", "*(&")
-    # Replace void * declarations with s32 * so dereferencing never gives void expression error
-
-    sym_lo_type = {}
-    for line in asm_txt.splitlines():
-        m = re.search(r"\b(lbu|lb|sb|lhu|lh|sh|lw|sw)\b.*%lo\((\w+)\)", line)
-        if m:
-            op, sym = m.group(1), m.group(2)
-            sym_lo_type.setdefault(sym, OP_TO_TYPE[op])
-
-    c = replace_deref_add(c, sym_lo_type)
-
-    # For any remaining uncast &D_XXXX involved in + (e.g. (var_s1 * 4) + &D_80158748), cast &D_XXXX to (void *)&D_XXXX
-    c = re.sub(r"(\+\s*)&(D_[0-9A-F]{8})\b", r"\1(void *)&\2", c)
-    c = re.sub(r"(?<!\*)&(D_[0-9A-F]{8})(\s*\+)", r"(void *)&\1\2", c)
-
-    # Fix missing leading arg0/arg1/arg2 in function definition
-    def fix_sig(m):
-        ret, fn, params = m.group(1), m.group(2), m.group(3).strip()
-        if not params or params == "void":
-            return m.group(0)
-        plist = [p.strip() for p in params.split(",")]
-        arg_nums = []
-        for p in plist:
-            ma = re.search(r"\barg(\d+)$", p)
-            if ma:
-                arg_nums.append(int(ma.group(1)))
-        if arg_nums and arg_nums != list(range(max(arg_nums) + 1)):
-            existing = {}
-            for p in plist:
-                ma = re.search(r"\barg(\d+)$", p)
-                if ma:
-                    existing[int(ma.group(1))] = p
-            new_plist = [existing.get(k, f"s32 arg{k}") for k in range(max(arg_nums) + 1)]
-            return f"{ret}{fn}({', '.join(new_plist)}) {{"
-        return m.group(0)
-    c = re.sub(r"^([A-Za-z0-9_ *]+?\b)(func_[0-9A-F]{8})\(([^)]*)\)\s*\{", fix_sig, c, flags=re.M)
-    return c
 
 def compile_one(args):
     binary, name, c_code, opt = args
@@ -115,13 +27,16 @@ def compile_one(args):
     s = re.sub(r"\$L([C]?\d+)", rf"$L_{name}_\1", s)
     return (name, s)
 
-for binary, exe_name, opts_to_test in [
-    ("slus", "SLUS_007.92", ["-O1 -G8", "-O2 -G8"]),
-    ("civ2", "CIV2.EXE", ["-O1 -G8", "-O2 -G8"]),
-]:
+
+
+def sweep(binary, exe_name, opts_to_test, only=None, out_path=None):
+    opts_to_test = list(opts_to_test)
     m2c_res = pickle.load(open(f"/tmp/m2c_cache_{binary}.pkl", "rb"))
     files = sorted(glob.glob(f"{D}/asm/us/{binary}/nonmatchings/game/func_*.s"))
     valid_m2c = [(n, f, enhance_c(binary, n, f, c)) for (n, f, c) in m2c_res if c and f" {n}(" in c]
+    if only is not None:
+        valid_m2c = [t for t in valid_m2c if t[0] in only]
+        print(f"  [filter] testing {len(valid_m2c)} of {len(m2c_res)} cached functions")
 
     ob = open(f"{D}/disks/us/{exe_name}", "rb").read()[0x800:]
     ovram = 0x80010000
@@ -205,5 +120,37 @@ for binary, exe_name, opts_to_test in [
             elif nd == 1:
                 near1 += 1
         print(f"  [{opt}]: {len(ok_s)}/{len(valid_m2c)} compiled -> {len(matches)} EXACT 100% MATCHES! (+ {near1} w/ 1 diff)")
-    pickle.dump(all_matched, open(f"/tmp/matched_{binary}.pkl", "wb"))
+    pickle.dump(all_matched, open(out_path or f"/tmp/matched_{binary}.pkl", "wb"))
     print(f"  ==> Total unique 100% matched {exe_name} functions: {len(all_matched)}/{len(files)} ({100*len(all_matched)/len(files):.1f}%)\n")
+    return all_matched
+
+
+DEFAULT_OPTS = ["-O1 -G8", "-O2 -G8"]
+BINARIES = [("slus", "SLUS_007.92"), ("civ2", "CIV2.EXE")]
+
+
+def main(argv=None):
+    import argparse
+    ap = argparse.ArgumentParser(description="Automated m2c -> cc1 -> byte-compare matching sweep.")
+    ap.add_argument("--bin", dest="binary", choices=["slus", "civ2"], default=None)
+    ap.add_argument("--opts", action="append", default=None,
+                    help="cc1 optimisation flags to test (repeatable). Default: -O1 -G8 and -O2 -G8")
+    ap.add_argument("--only-file", default=None,
+                    help="File with one function name per line; restrict the sweep to those functions.")
+    ap.add_argument("--out", default=None, help="Output pickle path (default /tmp/matched_<bin>.pkl)")
+    args = ap.parse_args(argv)
+
+    opts = args.opts or DEFAULT_OPTS
+    only = None
+    if args.only_file:
+        only = {l.strip() for l in open(args.only_file) if l.strip()}
+
+    for binary, exe_name in BINARIES:
+        if args.binary and binary != args.binary:
+            continue
+        out = args.out or f"/tmp/matched_{binary}.pkl"
+        sweep(binary, exe_name, opts, only=only, out_path=out)
+
+
+if __name__ == "__main__":
+    main()
