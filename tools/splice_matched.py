@@ -218,7 +218,10 @@ def splice_binary(binary: str):
     spliced_count = 0
     for fn, c_code in transformed.items():
         pat_asm = rf'INCLUDE_ASM\("asm/us/{binary}/nonmatchings/game",\s*{fn}\);'
-        pat_stub = rf'(?:void|s32)\s+{fn}\(\)\s*\{{[^}}]*\}}'
+        # Only an *empty* body counts as a stub: matching "up to the first closing brace"
+        # would truncate an already-spliced body at its first nested brace and append the
+        # draft after it, leaving an orphan brace behind.
+        pat_stub = rf'(?:void|s32)\s+{fn}\(\)\s*\{{\s*\}}'
         if re.search(pat_asm, game_c):
             game_c = re.sub(pat_asm, lambda _: c_code, game_c, count=1)
             spliced_count += 1
