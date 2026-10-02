@@ -162,6 +162,10 @@ across a wider flag matrix (`-O1/-O2/-O3` × `-G0/-G4/-G8`, plus `-fomit-frame-p
 exposes `--opts` and `--only-file`. These functions never touch `$gp`, so they must be compiled
 without the `-G8` small-data threshold that the rest of the file uses.
 
+### 5b. Restoring a Build Environment from Scratch
+
+Only the decompilation sources are tracked; the compiler, the disc and the generated linker scripts are not. `tools/restore_env.sh` performs the whole restoration in one command on a fresh machine (or after a sandbox reset): it installs GCC 2.7.2 PSX + binutils + p7zip + the Python packages, generates the splat linker scripts, downloads the retail disc zip (handling Google Drive's interposition page), extracts `SLUS_007.92` / `CIV2.EXE` and verifies them against `config/us/*.sha1`, then re-applies `tools/splice_matched.py` so `src/*/game.c` is in its spliced state. Pass `ROM=/path/to/disc.cue` to skip the download.
+
 ### 6. Automated Matching Pipeline
 
 The end-to-end sweep is three stages, all re-runnable:
