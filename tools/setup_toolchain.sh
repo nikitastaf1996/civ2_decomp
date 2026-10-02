@@ -25,11 +25,14 @@ else
 fi
 
 echo "==> MIPS binutils + cpp"
-if ! command -v mipsel-linux-gnu-as >/dev/null || ! command -v mipsel-linux-gnu-cpp >/dev/null; then
+# p7zip-full is what tools/extract_disc.sh uses to pull the two PS-X EXEs out of
+# the converted ISO (isoinfo from genisoimage works as a fallback).
+if ! command -v mipsel-linux-gnu-as >/dev/null || ! command -v mipsel-linux-gnu-cpp >/dev/null \
+   || ! command -v 7z >/dev/null; then
     if command -v apt-get >/dev/null; then
-        sudo apt-get install -y binutils-mipsel-linux-gnu cpp-mipsel-linux-gnu
+        sudo apt-get install -y binutils-mipsel-linux-gnu cpp-mipsel-linux-gnu p7zip-full
     else
-        echo "    !! install binutils-mipsel-linux-gnu and cpp-mipsel-linux-gnu manually" >&2
+        echo "    !! install binutils-mipsel-linux-gnu, cpp-mipsel-linux-gnu and p7zip-full manually" >&2
     fi
 else
     echo "    already present"
@@ -38,5 +41,14 @@ fi
 echo "==> Python packages"
 python3 -m pip install --quiet --disable-pip-version-check \
     splat64 spimdisasm n64img pygfxd crunch64 pyelftools pyyaml
+
+
+echo "==> Linker scripts (splat)"
+# build/us/generated/{slus,civ2}.ld come from splat; `make` cannot generate them itself
+# and fails with "No rule to make target ..." on a fresh checkout.
+for y in slus civ2; do
+    python3 -m splat split "config/us/$y.yaml" >/dev/null
+done
+echo "    generated build/us/generated/{slus,civ2}.ld"
 
 echo "==> done.  Next: tools/extract_disc.sh <disc.cue>  &&  make -j\$(nproc) && make compare"
