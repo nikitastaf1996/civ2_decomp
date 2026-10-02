@@ -7,10 +7,10 @@ Both retail PS-X executables on the disc are split, rebuilt from C + assembly, a
 | Executable | Role | Retail Size | SHA-1 | Game Functions | PsyQ 4.2 SDK Symbols | Matched C Functions | Total Accounted |
 | :--- | :--- | :---: | :--- | :---: | :---: | :---: | :---: |
 | **`SLUS_007.92`** | Title / Setup / Intro Movie Player | 290,816 B (`0x47000`) | `362a030a231fc5952010909faf848a8a461bbb3c` | 208 | 375 | **83 / 208 (39.9%)** | **458 / 583 (78.6%)** |
-| **`CIV2.EXE`** | Main Strategy Game Engine | 1,351,680 B (`0x14A000`) | `919bad81720f9b0e129fd5f10fb155cd7aa3c98c` | 1,427 | 390 | **613 / 1,427 (43.0%)** | **1,003 / 1,817 (55.2%)** |
-| **Combined** | **Full Game** | **1,642,496 B** | **100% Byte-Identical** | **1,635** | **765** | **696 / 1,635 (42.6%)** | **1,461 / 2,400 (60.9%)** |
+| **`CIV2.EXE`** | Main Strategy Game Engine | 1,351,680 B (`0x14A000`) | `919bad81720f9b0e129fd5f10fb155cd7aa3c98c` | 1,427 | 390 | **615 / 1,427 (43.1%)** | **1,005 / 1,817 (55.3%)** |
+| **Combined** | **Full Game** | **1,642,496 B** | **100% Byte-Identical** | **1,635** | **765** | **698 / 1,635 (42.7%)** | **1,463 / 2,400 (61.0%)** |
 
-*(Note: 694 of the 696 matched C functions are spliced directly into `src/slus/game.c` and `src/civ2/game.c`; 2 jump-table functions in `CIV2.EXE` — `func_800916F0` and `func_80094298` — also match 100% and await `.rodata` jump-table migration.)*
+*(Note: 696 of the 698 matched C functions are spliced directly into `src/slus/game.c` and `src/civ2/game.c`; 2 jump-table functions in `CIV2.EXE` — `func_800916F0` and `func_80094298` — also match 100% and await `.rodata` jump-table migration.)*
 
 ---
 
@@ -54,6 +54,34 @@ To maximize automated byte-for-byte matching before manual decompilation, severa
    - **Cross-Function Symbol Aliasing (`tools/splice_matched.py`)**: Uses GNU C `__asm__("SYM")` labels on block-scope `extern` declarations when different functions in `game.c` infer signed vs. unsigned types for the same global symbol, preserving exact per-function codegen in a single translation unit.
    - **Signature Reconciliation on Splice (`tools/splice_matched.py`)**: A function whose definition is spliced while an already-present caller declares it `M2C_UNK f();` is rejected under C89 ("conflicting types"), and a *prototype* definition additionally breaks call sites that legitimately pass fewer arguments than the callee reads (the O32 ABI simply leaves the remaining `$a0-$a3` registers untouched). Newly spliced definitions therefore (a) rewrite every pre-existing declaration of that symbol to the definition's return type *without* a parameter list, and (b) are emitted in K&R parameter style (opt-in list in the tool) whenever an existing call site under-supplies arguments — a K&R definition accepts both a full and an empty argument list. Single-line drafts are expanded so that collected `extern` lines land inside the body.
 4. **ASPSX `$at` Symbol-Offset Expansion**: 552 of the 1,427 `CIV2.EXE` functions contain the sequence `lui $at, %hi(SYM)` / `addu $at, $at, RIDX` / `l{b,h,w} RD, %lo(SYM)($at)`. This is *not* a compiler idiom: it is the ASPSX 2.56 assembler rewriting a compiler-emitted `lw RD, SYM(RIDX)` (symbol offset plus a variable register) into a scratch-register sequence at assembly time. `tools/maspsx_wrap.py` reproduces the expansion, so the plain C form (`extern u8 D_XXXX[]; ... D_XXXX[i * STRIDE] ...`) matches byte-for-byte. Functions carrying this pattern had been systematically avoided as "unmatchable"; they are in fact ordinary code, and the smallest ones (`func_8007CE00`, `func_80077D2C`, `func_800D9F10`, …) are among the cheapest remaining matches.
+
+### 3b. Remaining Near-Misses (resume here)
+Verified measurements (`tools/try_match.py`, diff counts = differing instructions):
+
+| Function | Size | Diffs | What is left |
+| :--- | ---: | ---: | :--- |
+| `func_8001470C` | `0x38` | 2 | Shift count kept in `$v1` instead of reusing `$a0` (`sll v1,a0,1` / `srav v0,v0,v1`) |
+| `func_80094CC4` | `0x34` | 2 | `xor` operand order only (`xor v0,v0,a0` vs `xor $v0,$a0,$v0`) |
+| `func_800C59B0` | `0x3c` | 2 | Order of the three register set-ups (`i`, the `-1` constant, the byte offset) |
+| `func_800D89C0` | `0x3c` | 2 | `if ((x ^ 2) == 0)` reproduces `xori`/`sltiu` but cc1 branches directly instead of materialising the boolean |
+| `func_800CEF38` | `0x24` | 5 | `-arg1` must compile to `nor $v0,$zero,$a1` + `addiu $v0,$v0,1`, not `negu` |
+| `func_800CE4FC` | `0x34` | 6 | `if`/`else` polarity plus the `addiu $sp,-8` pre-adjustment |
+| `func_800DD784` | `0x38` | 7 | Symbol address must be materialised in `$v1` before the index is added |
+| `func_80014AAC` | `0x38` | 7 | Retail keeps `1 << arg1`; cc1 rewrites the bit test to `srav`+`andi 1` |
+| `func_800D9C5C` | `0x3c` | 10 | Both base symbols materialised in registers (`lui/addiu` + `addu`) |
+| `func_8009800C` | `0x34` | 11 | Retail re-reads the halfword it just stored; cc1 forwards the stored value |
+| `func_800CEE08` | `0x30` | 12 | Same `nor`/`addiu` negation idiom as `func_800CEF38` |
+| `func_80085170` | `0x40` | 14 | `s16` stack parameter must be read with `lh`, not `lw` + `sll/sra` (cc1 promotes because the callee has no prototype) |
+| `func_800CAC4C` | `0x58` | 16 | Boolean accumulation across `!`, `||` and a comma expression |
+| `func_8009BC2C` | `0xdc` | 35 | Target hoists `&D_8011E72C` into `$s5` and loads the guard through generic `$at` addressing; all draft forms tested hoist `&D_8011E956` instead |
+| `func_8009BE60` | `0xac` | 43 | Same root cause as `func_8009BC2C`; size is already exact at `-O2` |
+
+Idioms that have resolved other near-misses (re-apply before rewriting logic):
+1. **Optimisation level**: the retail build mixes `-O1` and `-O2`. A candidate 10+ diffs away at `-O1` can be exact at `-O2` (both were found this way: `func_800C4FAC`, `func_800C58A8`). Always test `-O2`/`-O3` before abandoning a draft.
+2. **Symbol declared as a byte array**: `extern u8 SYM[];` with `*(s32 *)SYM` / `(s8 *)SYM - K` makes cc1 materialise the address into a register instead of using the assembler's symbol-offset form — required when the retail code keeps the address in a saved register because it is also used as a value.
+3. **Local declaration order is load-bearing**: swapping two `s32` declarations can change which register cc1 allocates to which variable (`func_800A2364` matched only after `r` was declared before `v`).
+4. **Temp type drives the load width**: an `s16` temporary is loaded with `lh`, an `s32` one with `lh` + use; a value only ever stored back as a halfword can be loaded with `lhu` where the retail code uses `lh` (`func_800CEC14`).
+5. **Prototype-less callees promote arguments**: `void f();` makes cc1 widen short arguments at the call site, which changes the caller's codegen.
 
 ---
 
