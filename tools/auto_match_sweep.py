@@ -51,6 +51,7 @@ def sweep(binary, exe_name, opts_to_test, only=None, out_path=None):
         return int(m.group(1), 16) if m else symaddr.get(n)
 
     all_matched = {}
+    near_misses = {}
     c_map = {n: c for (n, f, c) in valid_m2c}
     for opt in opts_to_test:
         with Pool(2) as p:
@@ -63,6 +64,47 @@ def sweep(binary, exe_name, opts_to_test, only=None, out_path=None):
             f"mipsel-linux-gnu-as -EL -march=r3000 -no-pad-sections -O1 -G0 -I{D} -I{D}/include -o {w}.o {w}.ms.s",
             shell=True, capture_output=True, text=True
         )
+        if not os.path.exists(w + ".o"):
+            # A single unassemblable draft (m2c output that still contains unknown
+            # constructs) would otherwise abort the whole sweep.  Drop the offending
+            # functions and retry the batch without them.
+            bad = set(re.findall(rf"{w}\.ms\.s:(\d+):", r.stderr))
+            if bad:
+                all_lines = open(w + ".s").read().split("\n")
+                print(f"  [{opt}] {len(r.stderr.splitlines())} assembler errors; "
+                      f"dropping {len(bad)} drafts and retrying", flush=True)
+            else:
+                print(f"  [{opt}] assembler failed: {r.stderr.strip().splitlines()[-1] if r.stderr else '?'}",
+                      flush=True)
+                r.stderr = ""
+            # Retry per-function so one bad draft cannot take out the batch.
+            survivors = []
+            for (n, s) in comp_res:
+                if not s:
+                    continue
+                single = tempfile.mktemp(prefix=f"{binary}_one_")
+                open(single + ".s", "w").write(s)
+                rr = subprocess.run(
+                    f"python3 {D}/external/maspsx/maspsx.py --aspsx-version=2.56 --expand-div -G8 < {single}.s > {single}.ms.s && "
+                    f"mipsel-linux-gnu-as -EL -march=r3000 -no-pad-sections -O1 -G0 -I{D} -I{D}/include -o {single}.o {single}.ms.s",
+                    shell=True, capture_output=True, text=True
+                )
+                if os.path.exists(single + ".o"):
+                    survivors.append((n, s))
+            if not survivors:
+                print(f"  [{opt}] no draft assembled; skipping this optimisation level", flush=True)
+                continue
+            comp_res = survivors
+            ok_s = [s for (n, s) in comp_res]
+            open(w + ".s", "w").write("\n".join(ok_s))
+            r = subprocess.run(
+                f"python3 {D}/external/maspsx/maspsx.py --aspsx-version=2.56 --expand-div -G8 < {w}.s > {w}.ms.s && "
+                f"mipsel-linux-gnu-as -EL -march=r3000 -no-pad-sections -O1 -G0 -I{D} -I{D}/include -o {w}.o {w}.ms.s",
+                shell=True, capture_output=True, text=True
+            )
+            if not os.path.exists(w + ".o"):
+                print(f"  [{opt}] batch still fails to assemble; skipping", flush=True)
+                continue
         e = ELFFile(open(w + ".o", "rb"))
         text = e.get_section_by_name(".text").data()
         rel = {}
@@ -117,10 +159,19 @@ def sweep(binary, exe_name, opts_to_test, only=None, out_path=None):
             if nd == 0:
                 matches.append(name)
                 all_matched.setdefault(name, (opt, c_map[name]))
-            elif nd == 1:
+            elif nd <= 3:
                 near1 += 1
+                if name not in near_misses or nd < near_misses[name][0]:
+                    near_misses[name] = (nd, opt)
         print(f"  [{opt}]: {len(ok_s)}/{len(valid_m2c)} compiled -> {len(matches)} EXACT 100% MATCHES! (+ {near1} w/ 1 diff)")
     pickle.dump(all_matched, open(out_path or f"/tmp/matched_{binary}.pkl", "wb"))
+    # Near-misses (<=3 differing instructions) are the cheapest manual wins; record
+    # them with their best optimisation level so a human pass can start there.
+    nm_path = f"/tmp/near_misses_{binary}.txt"
+    with open(nm_path, "w") as f:
+        for name, (nd, opt) in sorted(near_misses.items(), key=lambda kv: (kv[1][0], kv[0])):
+            f.write(f"{nd} {opt} {name}\n")
+    print(f"  ==> {len(near_misses)} near-misses (<=3 diffs) written to {nm_path}")
     print(f"  ==> Total unique 100% matched {exe_name} functions: {len(all_matched)}/{len(files)} ({100*len(all_matched)/len(files):.1f}%)\n")
     return all_matched
 

@@ -7,10 +7,10 @@ Both retail PS-X executables on the disc are split, rebuilt from C + assembly, a
 | Executable | Role | Retail Size | SHA-1 | Game Functions | PsyQ 4.2 SDK Symbols | Matched C Functions | Total Accounted |
 | :--- | :--- | :---: | :--- | :---: | :---: | :---: | :---: |
 | **`SLUS_007.92`** | Title / Setup / Intro Movie Player | 290,816 B (`0x47000`) | `362a030a231fc5952010909faf848a8a461bbb3c` | 208 | 375 | **83 / 208 (39.9%)** | **458 / 583 (78.6%)** |
-| **`CIV2.EXE`** | Main Strategy Game Engine | 1,351,680 B (`0x14A000`) | `919bad81720f9b0e129fd5f10fb155cd7aa3c98c` | 1,427 | 390 | **623 / 1,427 (43.7%)** | **1,013 / 1,817 (55.8%)** |
-| **Combined** | **Full Game** | **1,642,496 B** | **100% Byte-Identical** | **1,635** | **765** | **706 / 1,635 (43.2%)** | **1,471 / 2,400 (61.3%)** |
+| **`CIV2.EXE`** | Main Strategy Game Engine | 1,351,680 B (`0x14A000`) | `919bad81720f9b0e129fd5f10fb155cd7aa3c98c` | 1,427 | 390 | **631 / 1,427 (44.2%)** | **1,021 / 1,817 (56.2%)** |
+| **Combined** | **Full Game** | **1,642,496 B** | **100% Byte-Identical** | **1,635** | **765** | **714 / 1,635 (43.7%)** | **1,479 / 2,400 (61.6%)** |
 
-*(Note: 704 of the 706 matched C functions are spliced directly into `src/slus/game.c` and `src/civ2/game.c`; 2 jump-table functions in `CIV2.EXE` — `func_800916F0` and `func_80094298` — also match 100% and await `.rodata` jump-table migration.)*
+*(Note: 712 of the 714 matched C functions are spliced directly into `src/slus/game.c` and `src/civ2/game.c`; 2 jump-table functions in `CIV2.EXE` — `func_800916F0` and `func_80094298` — also match 100% and await `.rodata` jump-table migration.)*
 
 ---
 
@@ -81,8 +81,12 @@ Idioms that have resolved other near-misses (re-apply before rewriting logic):
 2. **Symbol declared as a byte array**: `extern u8 SYM[];` with `*(s32 *)SYM` / `(s8 *)SYM - K` makes cc1 materialise the address into a register instead of using the assembler's symbol-offset form — required when the retail code keeps the address in a saved register because it is also used as a value.
 3. **Local declaration order is load-bearing**: swapping two `s32` declarations can change which register cc1 allocates to which variable (`func_800A2364` matched only after `r` was declared before `v`).
 4. **Temp type drives the load width**: an `s16` temporary is loaded with `lh`, an `s32` one with `lh` + use; a value only ever stored back as a halfword can be loaded with `lhu` where the retail code uses `lh` (`func_800CEC14`).
-5. **Nested `if`s instead of `&&` defeats range-check folding**: cc1 rewrites `a < 0xD3 && a >= 0xD0` into `(u32)(a - 0xD0) < 3` (one `sltiu`), but the retail code keeps two separate `slti`s. Writing the outer test first and nesting the inner one (`if (a < 0xD3) { if (a >= 0xD0) ... }`) preserves the retail shape — this is what matched `func_800C82B4`.
-6. **Prototype-less callees promote arguments**: `void f();` makes cc1 widen short arguments at the call site, which changes the caller's codegen.
+5. **A variable read back from memory through a local keeps its register**: giving a parameter to a local (`s16 v = arg2;`) and then using `(u16)v` forces the mask to be built from the *saved* copy (callee-saved) instead of re-reading the incoming argument register — this is what completed `func_80094A2C`.
+6. **One variable, two roles**: reusing the same local first for a function result and later as a loop counter makes cc1 place it in a callee-saved register (live across the calls), which is the shape `func_8007D62C` needs; a separate temporary lands in `$v1` instead.
+7. **Signed store of `-1`**: storing `-1` through an `s8 *` emits `addiu $v0,$zero,-1`, while storing it through a `u8 *` emits `li v0,255` — the exact difference that matched `func_8002E690`.
+8. **Early `return arg0;` merges epilogues**: for `x == 0 → return arg0; else shift`-shaped functions the retail code keeps one shared `jr $ra` with the value already moved into `$v0`; writing the early return instead of a `var = arg0` initialization reproduces it (`func_800B4514`, `func_800CEF38`'s remaining diff).
+9. **Nested `if`s instead of `&&` defeats range-check folding**: cc1 rewrites `a < 0xD3 && a >= 0xD0` into `(u32)(a - 0xD0) < 3` (one `sltiu`), but the retail code keeps two separate `slti`s. Writing the outer test first and nesting the inner one (`if (a < 0xD3) { if (a >= 0xD0) ... }`) preserves the retail shape — this is what matched `func_800C82B4`.
+10. **Prototype-less callees promote arguments**: `void f();` makes cc1 widen short arguments at the call site, which changes the caller's codegen.
 
 ---
 
