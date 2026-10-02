@@ -34,7 +34,21 @@ PROMOTE_TO_S32 = {
 
 
 def splice_binary(binary: str):
-    matched = pickle.load(open(f"/tmp/matched_{binary}.pkl", "rb"))
+    # Sources of hand-matched functions, in priority order:
+    #   1. /home/user/bank.json - persistent, workspace-backed store (survives /tmp being wiped)
+    #   2. /tmp/matched_<binary>.pkl - the sweep tools' scratch output
+    matched = {}
+    bank_path = "/home/user/bank.json"
+    if os.path.exists(bank_path):
+        import json
+
+        for fn, rec in json.load(open(bank_path)).items():
+            if rec.get("bin", binary) == binary:
+                matched[fn] = (rec["opt"], rec["code"])
+    pkl_path = f"/tmp/matched_{binary}.pkl"
+    if os.path.exists(pkl_path):
+        for fn, rec in pickle.load(open(pkl_path, "rb")).items():
+            matched.setdefault(fn, rec)
     if binary == "civ2":
         # Exclude jump-table functions whose .rodata jump tables are still in game.rodata.s
         matched.pop("func_800916F0", None)
