@@ -555,6 +555,72 @@ def fix_address_term_order(body):
     return body if changed else None
 
 
+# m2c keeps the byte offset and the element index of a loop as two variables:
+#     var_v0 = 0 * 4;
+#     do {
+#         *(s32 *)(var_v0 + arg0) = 0;
+#         var_v1 += 1;
+#         var_v0 = var_v1 * 4;
+#     } while (var_v1 < 2);
+# The retail loop has a single induction variable and scales it in the body, so
+# the extra variable moves the `sll` into the branch delay slot and adds a dead
+# `addu` at the top.  Folding the offset back into the index (func_80042938)
+# restores the loop.
+INDUCT_INIT_RE = re.compile(r"^(?P<ind>[ \t]+)(?P<a>\w+) = 0 \* (?P<n>\d+);[ \t]*$", re.M)
+INDUCT_STEP_RE = re.compile(r"^(?P<ind>[ \t]+)(?P<a>\w+) = (?P<b>[A-Za-z_]\w*) \* (?P<n>\d+);[ \t]*$", re.M)
+
+
+def fold_induction_offsets(body):
+    """Fold an m2c offset variable back into the index expression of its loop.
+
+    m2c keeps the byte offset and the element index as two separate loop variables
+    (`var_v0 = 0 * 4; ... var_v0 = var_v1 * 4;`).  The retail loop has a single
+    induction variable and scales it in the body, so the extra variable moves the
+    `sll` into the branch delay slot and leaves a dead `addu` at the loop head.
+    Folding the offset into the index (func_80042938) restores the loop exactly.
+
+    One fold at a time: every rewrite shifts the offsets of everything after it,
+    so the matches are recomputed from the rewritten text before the next fold.
+    """
+    decl_re = re.compile(r"^\s*(?:s32|u32|s16|u16|s8|u8|M2C_UNK|void)\s*\*?\s*(\w+)\s*;")
+
+    def fold_once(text):
+        for init in INDUCT_INIT_RE.finditer(text):
+            a, n = init.group("a"), init.group("n")
+            steps = [m for m in INDUCT_STEP_RE.finditer(text)
+                     if m.group("a") == a and m.group("n") == n]
+            if len(steps) != 1:
+                continue
+            b = steps[0].group("b")
+            # Only the two assignments may mention the offset: any further use is
+            # rewritten, so a variable that is also read before its first
+            # assignment is left alone.
+            stripped = text
+            for span in sorted([init.span(), steps[0].span()], reverse=True):
+                stripped = stripped[: span[0]] + stripped[span[1]:]
+            if len(re.findall(r"\b" + re.escape(a) + r"\b", stripped)) \
+                    != len(re.findall(r"\b" + re.escape(a) + r"\b", text)) - 2:
+                continue
+            if not re.search(r"\b" + re.escape(a) + r"\b", stripped):
+                continue
+            # A declaration keeps the old name; only uses are folded.
+            out = []
+            for line in stripped.splitlines():
+                if not decl_re.match(line):
+                    line = re.sub(r"\b" + re.escape(a) + r"\b", f"({b} * {n})", line)
+                out.append(line)
+            return "\n".join(out) + ("\n" if stripped.endswith("\n") else "")
+        return None
+
+    changed = False
+    while True:
+        nxt = fold_once(body)
+        if nxt is None or nxt == body:
+            break
+        body, changed = nxt, True
+    return body if changed else None
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--bin", dest="binary", choices=["slus", "civ2"], default="civ2")
@@ -562,7 +628,7 @@ def main() -> int:
     ap.add_argument("--out", dest="dst", default=None)
     ap.add_argument("--only-file", default=None,
                     help="File with one function name per line; rewrite only those.")
-    ap.add_argument("--passes", default="sdiv,stack,halfword,rmw,initorder,ubyte,arrindex,addrfirst",
+    ap.add_argument("--passes", default="sdiv,stack,halfword,rmw,initorder,ubyte,arrindex,addrfirst,foldind",
                     help="Comma-separated rewrite passes to apply (stack, halfword, rmw, "
                          "struct). Each pass is optional, so several caches can be built and "
                          "swept independently instead of betting on one chain.")
@@ -606,6 +672,7 @@ def main() -> int:
             ("ubyte", fix_unsigned_byte_constants),
             ("arrindex", arrayify_indexed),
             ("addrfirst", fix_address_term_order),
+            ("foldind", fold_induction_offsets),
             ("struct", structify_globals),
         )
         fired = []
