@@ -14,6 +14,7 @@ import argparse
 import glob
 import os
 import pickle
+import re
 import subprocess
 import sys
 from multiprocessing import Pool
@@ -43,7 +44,10 @@ def decompile(path: str):
         return (name, path, None)
     c = r.stdout
     # Keep only the function whose name matches the file (m2c can emit helpers too).
-    if f" {name}(" not in c:
+    # NB: match on a word boundary, not on " name(" -- a pointer-returning
+    # definition (`void *func_800A2444(...)`) has no space before the name, and
+    # that spelling used to hide 35 functions from every sweep in the project.
+    if not re.search(r"\b" + re.escape(name) + r"\s*\(", c):
         return (name, path, c if c.strip() else None)
     return (name, path, c)
 

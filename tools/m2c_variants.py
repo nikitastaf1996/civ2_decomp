@@ -167,15 +167,128 @@ def fix_read_modify_write(body):
     return body
 
 
+# `M2C_FIELD(&D_8011A390, s16 *, 0x52)` -- m2c's spelling for a fixed offset off a
+# global.  cc1 folds each of these into `%lo(SYM+OFF)($at)`; the retail code keeps
+# the symbol address in a general register and uses it as the base for every
+# access, which cc1 only does for struct member references.
+FIELD_ACCESS_RE = re.compile(
+    r"M2C_FIELD\(&(?P<sym>\w+), (?P<ty>[A-Za-z_0-9]+) \*, (?P<off>0x[0-9A-Fa-f]+|\d+)\)",
+)
+TYPE_ALIGN = {"s8": 1, "u8": 1, "char": 1, "s16": 2, "u16": 2, "s32": 4, "u32": 4,
+              "M2C_UNK": 4, "M2C_UNK8": 1, "M2C_UNK16": 2, "M2C_UNK32": 4}
+
+
+def structify_globals(body):
+    """Rewrite constant-offset global field accesses as struct member accesses.
+
+    NOT part of the default pass list.  Struct member references do make cc1 keep
+    the base in a general register (`func_80065F98` needed exactly that), but the
+    rewrite is *not* universally better: applied in bulk it costs the three
+    instructions `func_80077BF8` is missing and changes no other function's diff
+    count in either direction.  Reach for it by hand when the retail build clearly
+    materialises a base register and cc1 is folding every access into
+    `%lo(SYM+N)($at)` instead.
+
+    Requires at least two accesses to the same symbol, all of them constant
+    offsets, non-overlapping and naturally aligned, and no other use of the
+    symbol name (a plain `&SYM` or a scalar read would make the two declarations
+    conflict).  Gaps become explicit `char _pad_XX[]` members so every field lands
+    on its retail offset.  This is what matched func_80065F98 by hand.
+    """
+    accesses = {}
+    for m in FIELD_ACCESS_RE.finditer(body):
+        accesses.setdefault(m.group("sym"), []).append(
+            (int(m.group("off"), 0), m.group("ty")))
+    if not accesses:
+        return None
+
+    changed = False
+    for sym, hits in accesses.items():
+        if len(hits) < 2:
+            continue
+        # The symbol may only appear in these field accesses...
+        other = len(re.findall(r"\b" + re.escape(sym) + r"\b", body)) - len(hits)
+        # ...plus its own declaration.
+        decl_re = re.compile(r"^extern\s+\w+\s+" + re.escape(sym) + r";[ \t]*$", re.M)
+        decls = decl_re.findall(body)
+        if other != len(decls):
+            continue
+        hits = sorted(hits)
+        # Natural alignment: cc1 would insert padding we did not ask for.
+        if any(off % TYPE_ALIGN.get(ty, 4) for off, ty in hits):
+            continue
+        if len({off for off, _ in hits}) != len(hits):
+            continue
+        members, prev_end = [], 0
+        ok = True
+        for off, ty in hits:
+            if off < prev_end:  # overlapping accesses: not a plain field layout
+                ok = False
+                break
+            if off > prev_end:
+                members.append(f"    char _pad_{prev_end:02X}[0x{off - prev_end:X}];")
+            members.append(f"    {ty} f_{off:02X};")
+            prev_end = off + TYPE_ALIGN.get(ty, 4)
+        if not ok:
+            continue
+        struct = "struct S_%s {\n%s\n};\n" % (sym, "\n".join(members))
+        body = decl_re.sub("extern struct S_%s %s;" % (sym, sym), body, count=1)
+        if struct not in body:
+            body = struct + body
+        for off, ty in hits:
+            body = body.replace(f"M2C_FIELD(&{sym}, {ty} *, 0x{off:X})", f"{sym}.f_{off:02X}")
+            body = body.replace(f"M2C_FIELD(&{sym}, {ty} *, {off})", f"{sym}.f_{off:02X}")
+        changed = True
+    return body if changed else None
+
+
+# `<cursor> = M2C_FIELD(<base>, T *, OFF);` immediately followed by `<acc> = NULL;`
+INIT_ORDER_RE = re.compile(
+    r"^(?P<i>[ \t]*)(?P<cursor>\w+) = (?P<load>M2C_FIELD\(.+?\));\n"
+    r"(?P=i)(?P<acc>\w+) = NULL;\n(?P=i)if \((?P=cursor) != NULL\) \{",
+    re.M,
+)
+
+
+def fix_init_order(body):
+    """Move `acc = NULL;` ahead of the sibling load it is compared against.
+
+    m2c emits the load first and the accumulator initialisation second, but the
+    retail build keeps the accumulator in a *different* argument register ($a2
+    rather than the dead $a0), which cc1 only does when the initialisation is
+    scheduled first -- the load can then be sunk into the branch's delay slot.
+    This is what matched func_800B2174, func_800B21B8 and func_800B21FC.
+    """
+    def repl(m):
+        i = m.group("i")
+        return (f"{i}{m.group('acc')} = NULL;\n"
+                f"{i}{m.group('cursor')} = {m.group('load')};\n"
+                f"{i}if ({m.group('cursor')} != NULL) {{")
+
+    out, n = INIT_ORDER_RE.subn(repl, body)
+    return out if n else None
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--bin", dest="binary", choices=["slus", "civ2"], default="civ2")
     ap.add_argument("--in", dest="src", default=None)
     ap.add_argument("--out", dest="dst", default=None)
+    ap.add_argument("--only-file", default=None,
+                    help="File with one function name per line; rewrite only those.")
+    ap.add_argument("--passes", default="stack,halfword,rmw,initorder",
+                    help="Comma-separated rewrite passes to apply (stack, halfword, rmw, "
+                         "struct). Each pass is optional, so several caches can be built and "
+                         "swept independently instead of betting on one chain.")
     args = ap.parse_args()
 
     src = args.src or f"/tmp/m2c_cache_{args.binary}.pkl"
     dst = args.dst or f"/tmp/m2c_cache_{args.binary}_v2.pkl"
+
+    wanted = [p.strip() for p in args.passes.split(",") if p.strip()]
+    only = None
+    if args.only_file:
+        only = {l.strip() for l in open(args.only_file) if l.strip()}
 
     results = []
     rewritten = 0
@@ -184,7 +297,12 @@ def main() -> int:
         if not raw:
             results.append((name, path, raw))
             continue
+        # Entries that are not selected are still enhanced, so that a cache built
+        # with --only-file is byte-identical to the full one for those functions.
         code = enhance_c(args.binary, name, path, raw)
+        if only is not None and name not in only:
+            results.append((name, path, code))
+            continue
         asm_path = os.path.join(
             os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
             "asm", "us", args.binary, "nonmatchings", "game", f"{name}.s",
@@ -197,9 +315,13 @@ def main() -> int:
             ("stack", lambda c: fix_stack_object_sizes(asm_text, c)),
             ("halfword", lambda c: widen_signed_halfword_subtract(c, [0])),
             ("rmw", fix_read_modify_write),
+            ("initorder", fix_init_order),
+            ("struct", structify_globals),
         )
         fired = []
         for label, fn in passes:
+            if label not in wanted:
+                continue
             variant = fn(code)
             if variant is not None:
                 code = variant
@@ -211,7 +333,8 @@ def main() -> int:
         results.append((name, path, code))
     pickle.dump(results, open(dst, "wb"))
     detail = ", ".join(f"{k}={v}" for k, v in sorted(fired_passes.items()))
-    print(f"[{args.binary}] {rewritten} drafts rewritten ({detail}) -> {dst}")
+    print(f"[{args.binary}] {rewritten} drafts rewritten "
+          f"[passes={','.join(wanted)}] ({detail}) -> {dst}")
     return 0
 
 

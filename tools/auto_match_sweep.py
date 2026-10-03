@@ -30,13 +30,14 @@ def compile_one(args):
 
 
 def sweep(binary, exe_name, opts_to_test, only=None, out_path=None, near_limit=3,
-          cache=None, pre_enhanced=False):
+          cache=None, pre_enhanced=False, near_out=None):
     opts_to_test = list(opts_to_test)
     m2c_res = pickle.load(open(cache or f"/tmp/m2c_cache_{binary}.pkl", "rb"))
     files = sorted(glob.glob(f"{D}/asm/us/{binary}/nonmatchings/game/func_*.s"))
     # `pre_enhanced` caches (tools/m2c_variants.py) already hold the enhanced draft.
     valid_m2c = [(n, f, c if pre_enhanced else enhance_c(binary, n, f, c))
-                 for (n, f, c) in m2c_res if c and f" {n}(" in c]
+                 for (n, f, c) in m2c_res
+                 if c and re.search(r"\b" + re.escape(n) + r"\s*\(", c)]
     if only is not None:
         valid_m2c = [t for t in valid_m2c if t[0] in only]
         print(f"  [filter] testing {len(valid_m2c)} of {len(m2c_res)} cached functions")
@@ -161,6 +162,10 @@ def sweep(binary, exe_name, opts_to_test, only=None, out_path=None, near_limit=3
                     nd += 1
             if nd == 0:
                 matches.append(name)
+                # A function that compiles exactly at one optimisation level can still be
+                # a near miss at another; the near-miss list is a triage queue and must
+                # not contain functions that are already matched.
+                near_misses.pop(name, None)
                 all_matched.setdefault(name, (opt, c_map[name]))
             elif nd <= near_limit:
                 near1 += 1
@@ -170,7 +175,7 @@ def sweep(binary, exe_name, opts_to_test, only=None, out_path=None, near_limit=3
     pickle.dump(all_matched, open(out_path or f"/tmp/matched_{binary}.pkl", "wb"))
     # Near-misses (<=3 differing instructions) are the cheapest manual wins; record
     # them with their best optimisation level so a human pass can start there.
-    nm_path = f"/tmp/near_misses_{binary}.txt"
+    nm_path = near_out or f"/tmp/near_misses_{binary}.txt"
     with open(nm_path, "w") as f:
         for name, (nd, opt) in sorted(near_misses.items(), key=lambda kv: (kv[1][0], kv[0])):
             f.write(f"{nd} {opt} {name}\n")
@@ -192,6 +197,9 @@ def main(argv=None):
     ap.add_argument("--only-file", default=None,
                     help="File with one function name per line; restrict the sweep to those functions.")
     ap.add_argument("--out", default=None, help="Output pickle path (default /tmp/matched_<bin>.pkl)")
+    ap.add_argument("--near-out", default=None,
+                    help="Where to write the near-miss list (default /tmp/near_misses_<bin>.txt); "
+                         "give each sweep variant its own file so they can be compared.")
     ap.add_argument("--cache", default=None,
                     help="Alternate m2c draft cache (e.g. /tmp/m2c_cache_civ2_v2.pkl from "
                          "tools/m2c_variants.py). Default /tmp/m2c_cache_<bin>.pkl")
@@ -214,7 +222,7 @@ def main(argv=None):
             continue
         out = args.out or f"/tmp/matched_{binary}.pkl"
         sweep(binary, exe_name, opts, only=only, out_path=out, near_limit=args.near,
-              cache=args.cache, pre_enhanced=args.enhanced)
+              cache=args.cache, pre_enhanced=args.enhanced, near_out=args.near_out)
 
 
 if __name__ == "__main__":
