@@ -208,6 +208,18 @@ now repairs automatically rather than per function:
    ```
 3. Test an individual C function against the retail binary:
    ```bash
-   python3 tools/try_match.py func_8001820C /tmp/func.c --bin slus
-   python3 tools/try_match.py func_80015A14 /tmp/func.c --bin civ2
+   python3 tools/try_match.py /tmp/func.c func_8001820C --bin slus
+   python3 tools/try_match.py /tmp/func.c func_80015A14 --bin civ2
+   ```
+   If the retail executables are not present locally, use the checked-in machine-code
+   comments as the reference while iterating on a draft:
+   ```bash
+   python3 tools/try_match.py /tmp/func.c func_80015A14 --bin civ2 --source-only
+   ```
+   `--source-only` compares against the encoded words in the tracked disassembly and does
+   not require a ROM copy. It is a development aid, not a substitute for `make compare`
+   against the retail executable.
+4. Run the lightweight reference-parser regression tests:
+   ```bash
+   python3 -m unittest discover -s tools/tests
    ```
