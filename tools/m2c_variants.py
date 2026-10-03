@@ -621,6 +621,45 @@ def fold_induction_offsets(body):
     return body if changed else None
 
 
+RMW_DECL_RE = re.compile(r"^extern\s+(?P<ty>\w+)\s+(?P<sym>\w+);[ \t]*$", re.M)
+RMW_STMT_RE = re.compile(
+    r"(?P<sym>\w+)\s*(?P<op>\+=|-=|\*=|/=|%=|&=|\|=|\^=|<<=|>>=)\s*(?P<expr>[^;]+);")
+
+
+def arrayify_scalar_rmw(body):
+    """Turn `SYM += 1;` into `SYM[0] += 1;` so cc1 materialises the address once.
+
+    For a read-modify-write on a scalar global, cc1 emits the symbol address twice
+    -- once for the load and once for the store -- and the first materialisation is
+    folded into the load (`lui $v0,%hi(SYM)` / `lhu $v0,%lo(SYM)($v0)`), which is
+    not what the retail build has.  With an array subscript cc1 keeps one address in
+    a register and uses it for both accesses:
+
+        lui $v1,%hi(SYM); addiu $v1,$v1,%lo(SYM); lhu $v0,0($v1)
+        addiu $v0,$v0,1; sh $v0,0($v1)
+
+    This is what func_80098CB8 needed.  A symbol is only rewritten when the
+    read-modify-write is its *only* mention besides the declaration.
+    """
+    changed = False
+    for m in reversed(list(RMW_DECL_RE.finditer(body))):
+        sym, ty = m.group("sym"), m.group("ty")
+        if ty not in TYPE_ALIGN:
+            continue
+        mentions = [r for r in RMW_STMT_RE.finditer(body) if r.group("sym") == sym]
+        if len(mentions) != 1:
+            continue
+        masked = body.replace(m.group(0), "", 1)
+        masked = masked.replace(mentions[0].group(0), "", 1)
+        if re.search(r"\b" + re.escape(sym) + r"\b", masked):
+            continue
+        body = body.replace(m.group(0), f"extern {ty} {sym}[];", 1)
+        body = body.replace(mentions[0].group(0),
+                            f"{sym}[0] {mentions[0].group('op')} {mentions[0].group('expr')};", 1)
+        changed = True
+    return body if changed else None
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--bin", dest="binary", choices=["slus", "civ2"], default="civ2")
@@ -628,7 +667,7 @@ def main() -> int:
     ap.add_argument("--out", dest="dst", default=None)
     ap.add_argument("--only-file", default=None,
                     help="File with one function name per line; rewrite only those.")
-    ap.add_argument("--passes", default="sdiv,stack,halfword,rmw,initorder,ubyte,arrindex,addrfirst,foldind",
+    ap.add_argument("--passes", default="sdiv,stack,halfword,rmw,initorder,ubyte,arrindex,addrfirst,foldind,rmwarr",
                     help="Comma-separated rewrite passes to apply (stack, halfword, rmw, "
                          "struct). Each pass is optional, so several caches can be built and "
                          "swept independently instead of betting on one chain.")
@@ -672,6 +711,7 @@ def main() -> int:
             ("ubyte", fix_unsigned_byte_constants),
             ("arrindex", arrayify_indexed),
             ("addrfirst", fix_address_term_order),
+            ("rmwarr", arrayify_scalar_rmw),
             ("foldind", fold_induction_offsets),
             ("struct", structify_globals),
         )
