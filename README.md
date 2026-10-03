@@ -6,11 +6,11 @@ Both retail PS-X executables on the disc are split, rebuilt from C + assembly, a
 
 | Executable | Role | Retail Size | SHA-1 | Game Functions | PsyQ 4.2 SDK Symbols | Matched C Functions | Total Accounted |
 | :--- | :--- | :---: | :--- | :---: | :---: | :---: | :---: |
-| **`SLUS_007.92`** | Title / Setup / Intro Movie Player | 290,816 B (`0x47000`) | `362a030a231fc5952010909faf848a8a461bbb3c` | 208 | 375 | **88 / 208 (42.3%)** | **463 / 583 (79.4%)** |
-| **`CIV2.EXE`** | Main Strategy Game Engine | 1,351,680 B (`0x14A000`) | `919bad81720f9b0e129fd5f10fb155cd7aa3c98c` | 1,427 | 390 | **631 / 1,427 (44.2%)** | **1,021 / 1,817 (56.2%)** |
-| **Combined** | **Full Game** | **1,642,496 B** | **100% Byte-Identical** | **1,635** | **765** | **719 / 1,635 (44.0%)** | **1,484 / 2,400 (61.8%)** |
+| **`SLUS_007.92`** | Title / Setup / Intro Movie Player | 290,816 B (`0x47000`) | `362a030a231fc5952010909faf848a8a461bbb3c` | 208 | 375 | **90 / 208 (43.3%)** | **465 / 583 (79.8%)** |
+| **`CIV2.EXE`** | Main Strategy Game Engine | 1,351,680 B (`0x14A000`) | `919bad81720f9b0e129fd5f10fb155cd7aa3c98c` | 1,427 | 390 | **641 / 1,427 (44.9%)** | **1,031 / 1,817 (56.7%)** |
+| **Combined** | **Full Game** | **1,642,496 B** | **100% Byte-Identical** | **1,635** | **765** | **731 / 1,635 (44.7%)** | **1,496 / 2,400 (62.3%)** |
 
-*(Note: 717 of the 719 matched C functions are spliced directly into `src/slus/game.c` and `src/civ2/game.c`; 2 jump-table functions in `CIV2.EXE` — `func_800916F0` and `func_80094298` — also match 100% and await `.rodata` jump-table migration.)*
+*(Note: 729 of the 731 matched C functions are spliced directly into `src/slus/game.c` and `src/civ2/game.c`; 2 jump-table functions in `CIV2.EXE` — `func_800916F0` and `func_80094298` — also match 100% and await `.rodata` jump-table migration. Counts are `1,427 - $(grep -c INCLUDE_ASM src/civ2/game.c)` and `208 - $(grep -c INCLUDE_ASM src/slus/game.c)`.)*
 
 ---
 
@@ -56,41 +56,66 @@ To maximize automated byte-for-byte matching before manual decompilation, severa
 4. **ASPSX `$at` Symbol-Offset Expansion**: 552 of the 1,427 `CIV2.EXE` functions contain the sequence `lui $at, %hi(SYM)` / `addu $at, $at, RIDX` / `l{b,h,w} RD, %lo(SYM)($at)`. This is *not* a compiler idiom: it is the ASPSX 2.56 assembler rewriting a compiler-emitted `lw RD, SYM(RIDX)` (symbol offset plus a variable register) into a scratch-register sequence at assembly time. `tools/maspsx_wrap.py` reproduces the expansion, so the plain C form (`extern u8 D_XXXX[]; ... D_XXXX[i * STRIDE] ...`) matches byte-for-byte. Functions carrying this pattern had been systematically avoided as "unmatchable"; they are in fact ordinary code, and the smallest ones (`func_8007CE00`, `func_80077D2C`, `func_800D9F10`, …) are among the cheapest remaining matches.
 
 ### 3b. Remaining Near-Misses (resume here)
-Verified measurements (`tools/try_match.py`, diff counts = differing instructions):
 
-| Function | Size | Diffs | What is left |
-| :--- | ---: | ---: | :--- |
-| `func_8001470C` | `0x38` | 2 | Shift count kept in `$v1` instead of reusing `$a0` (`sll v1,a0,1` / `srav v0,v0,v1`); 20+ source forms tested, always `$v1` |
-| `func_80094CC4` | `0x34` | 2 | Third `xor`'s operand order only; 60+ statement permutations swept, cc1 always canonicalises it to `xor v0,v0,a0` (inline memory operand fixes xors #1/#2) |
+`tools/auto_match_sweep.py --near N` now also records the functions that are
+*close* but not exact, which turns the sweep into a triage tool. At `--near 10`
+the current 786 unmatched `CIV2.EXE` functions contain 45 within ten differing
+instructions of the retail code; the list is written to
+`/tmp/near_misses_civ2.txt` sorted by diff count and is the cheapest place for a
+manual pass to start. The smallest remaining entries are:
 
-| `func_800B245C` | `0x3c` | 4 | `arg1 * 0x30` must land in `$v0` and the table load in `$v1`; declaration/assignment order permutations all give the reverse |
-| `func_800CEF38` | `0x24` | 5 | `-arg1` must compile to `nor $v0,$zero,$a1` + `addiu $v0,$v0,1`, not `negu` |
-| `func_800CE4FC` | `0x34` | 6 | `if`/`else` polarity plus the `addiu $sp,-8` pre-adjustment |
-| `func_800DD784` | `0x38` | 7 | Symbol address must be materialised in `$v1` before the index is added |
-| `func_80014AAC` | `0x38` | 7 | Retail keeps `1 << arg1`; cc1 rewrites the bit test to `srav`+`andi 1` |
-| `func_800D9C5C` | `0x3c` | 10 | Both base symbols materialised in registers (`lui/addiu` + `addu`) |
-| `func_8009800C` | `0x34` | 11 | Retail re-reads the halfword it just stored; cc1 forwards the stored value |
-| `func_800CEE08` | `0x30` | 12 | Same `nor`/`addiu` negation idiom as `func_800CEF38` |
-| `func_80085170` | `0x40` | 14 | `s16` stack parameter must be read with `lh`, not `lw` + `sll/sra` (cc1 promotes because the callee has no prototype) |
-| `func_800CAC4C` | `0x58` | 16 | Boolean accumulation across `!`, `||` and a comma expression |
-| `func_8009BC2C` | `0xdc` | 35 | Target hoists `&D_8011E72C` into `$s5` and loads the guard through generic `$at` addressing; all draft forms tested hoist `&D_8011E956` instead |
-| `func_8009BE60` | `0xac` | 43 | Same root cause as `func_8009BC2C`; size is already exact at `-O2` |
+| Function | Diff | What is left |
+| :--- | ---: | :--- |
+| `func_800D7D74` | 1 | Base must live in a saved register (`s0 = &D_80122AAC`) and be reused for `sw 0(s0)` / `sw -8(s0)` / `addiu a0,s0,-0xE88` |
+| `func_800A2910`, `func_800A29BC` | 3 | `x & ~2` must load into `$v0` and build `-3` in `$v1`; cc1 picks the mirror image for every spelling tried |
+| `func_800B4B7C` | 4 | `%gp_rel` load hoisting order around the first `jal` |
+| `func_800B8E8C` | 4 | Two global index scales (`0x250`, `0x94`) that the two terms must pick up in evaluation order |
+| `func_800142CC` | 5 | `s1 = arg0` must be scheduled before the `$ra` spill, and the first character must live in `$a0` |
+| `func_80088B78` | 5 | `&D_8010CC6B` must be materialised before the argument load |
+| `func_800A2BB8`, `func_800C6E20`, `func_800C855C`, `func_800C8720` | 5 | cc1 hands the two callee-saved temporaries out in the opposite order |
+| `func_800E01AC` | 5 | `%gp_rel(D_80159298)` load must precede the `addu` chain |
+| `func_80098CB8` | 6 | `&D_8011A27C` must be materialised; a single-member struct does not trigger it |
+| `func_8007B980`, `func_800A23EC` | 6 | Loop counter and result temporaries swap `$s0`/`$s1` |
+| `func_800A1428` | 6 | Branch polarity plus a stored-address computation |
+| `func_8007BF24`, `func_80095A10`, `func_8009B114` | 8 | — |
 
 Idioms that have resolved other near-misses (re-apply before rewriting logic):
-1. **Optimisation level**: the retail build mixes `-O1` and `-O2`. A candidate 10+ diffs away at `-O1` can be exact at `-O2` (both were found this way: `func_800C4FAC`, `func_800C58A8`). Always test `-O2`/`-O3` before abandoning a draft.
-2. **Symbol declared as a byte array**: `extern u8 SYM[];` with `*(s32 *)SYM` / `(s8 *)SYM - K` makes cc1 materialise the address into a register instead of using the assembler's symbol-offset form — required when the retail code keeps the address in a saved register because it is also used as a value.
-3. **Local declaration order is load-bearing**: swapping two `s32` declarations can change which register cc1 allocates to which variable (`func_800A2364` matched only after `r` was declared before `v`).
-4. **Temp type drives the load width**: an `s16` temporary is loaded with `lh`, an `s32` one with `lh` + use; a value only ever stored back as a halfword can be loaded with `lhu` where the retail code uses `lh` (`func_800CEC14`).
-5. **A variable read back from memory through a local keeps its register**: giving a parameter to a local (`s16 v = arg2;`) and then using `(u16)v` forces the mask to be built from the *saved* copy (callee-saved) instead of re-reading the incoming argument register — this is what completed `func_80094A2C`.
-6. **One variable, two roles**: reusing the same local first for a function result and later as a loop counter makes cc1 place it in a callee-saved register (live across the calls), which is the shape `func_8007D62C` needs; a separate temporary lands in `$v1` instead.
-7. **Signed store of `-1`**: storing `-1` through an `s8 *` emits `addiu $v0,$zero,-1`, while storing it through a `u8 *` emits `li v0,255` — the exact difference that matched `func_8002E690`.
-8. **Early `return arg0;` merges epilogues**: for `x == 0 → return arg0; else shift`-shaped functions the retail code keeps one shared `jr $ra` with the value already moved into `$v0`; writing the early return instead of a `var = arg0` initialization reproduces it (`func_800B4514`, `func_800CEF38`'s remaining diff).
-9. **Hoisted mask position is visible**: writing `arg0 &= 0xFF;` before a loop puts the `andi` before the loop's signed pre-check (`blez`); writing the mask inline in the comparison (`if (*p == (arg0 & 0xFF))`) lets cc1 hoist it *after* the pre-check instead — the retail shape (matched `func_8001B588`/`func_8001B5C8`/`func_8001B540` in `SLUS_007.92`).
-10. **Nested `if`s instead of `&&` defeats range-check folding**: cc1 rewrites `a < 0xD3 && a >= 0xD0` into `(u32)(a - 0xD0) < 3` (one `sltiu`), but the retail code keeps two separate `slti`s. Writing the outer test first and nesting the inner one (`if (a < 0xD3) { if (a >= 0xD0) ... }`) preserves the retail shape — this is what matched `func_800C82B4`.
-11. **Prototype-less callees promote arguments**: `void f();` makes cc1 widen short arguments at the call site, which changes the caller's codegen.
-
----
-
+0. **Materialised symbol base.** cc1 folds every constant symbol access into
+   `%lo(SYM+N)($at)` unless the accesses read as *struct member references*:
+   declaring `extern struct S_8011A390 { s16 f_00; s8 f_02; char _pad_03[0x4F];
+   s16 f_52; ... } D_8011A390;` and writing `D_8011A390.f_52 = 10;` makes cc1
+   keep the address in a general register and use it as the base for every
+   access, which is what `func_80065F98` needed. 154 unmatched `CIV2.EXE`
+   functions contain this shape, so it is by far the most valuable of these
+   rules. A plain `u8 *p = SYM;` pointer does *not* trigger it, and neither does
+   a single-member struct.
+0b. **`goto` before `return`.** `var = 0; if (c) { ...; var = x; } return var;`
+   constant-folds the pre-loop copy of the return value and materialises `zero`,
+   while the retail code keeps a register copy in the branch delay slot. Routing
+   the loop exit through a label (`if (...) { ...; goto end; } end: return var;`)
+   reproduces both the copy and the loop-exit branch polarity (`func_8007D750`).
+0c. **`s32` temporaries around a truncated halfword subtraction.** m2c renders
+   the retail `lh`/`lh`/`subu`/`sll`/`sra` sequence as `(s32)(s16)(A - B)`, but
+   cc1 then folds the sign-extending loads away and emits `lhu` + shifts
+   instead. Assigning the two loads to `s32` variables first keeps the `lh`
+   loads: `var_a0 = *p; var_a1 = *q; x = (s16)(var_a0 - var_a1);`
+   (`func_800929B8`, `func_80092164`, `func_800B1C78`).
+0d. **Stack-object size.** m2c guesses a single word for any local whose address
+   is passed to a callee (`M2C_UNK sp10;`), which shrinks the frame. The retail
+   frame pins the real size down: the object runs from its own `$sp` offset up
+   to the lowest saved-register slot, so `sp10[250]` (0x3E8 bytes) and
+   `sp18[0xC]` (0x30 bytes) are what `func_80043F10` and `func_800A4828`
+   actually allocate. `tools/m2c_variants.py` applies this automatically.
+0e. **Signed comparison instead of a bit test.** `if (x & 0x8000)` emits
+   `andi` + `beqz`; the retail `sll`/`bgez`/`sra` is `if (x < 0)` with `x`
+   declared `s16` (`func_8001BA5C`).
+0f. **`u8` constants are not `s8` constants.** `D_8012C897 = -76;` through an
+   `s8` field assembles to `addiu $v0,$zero,-0x4C`, but the retail
+   `addiu $v0,$zero,0xB4` is `0xB4` stored through a `u8` field
+   (`func_800270FC`).
+0g. **Reusing one index temporary for two index computations** instead of
+   letting m2c declare `temp_v1` and `temp_v1_2` keeps cc1 from splitting the
+   value across two registers (`func_800270FC`).
 ### 4. Call-Graph Impact Analysis & Manual Decompilation of Core Engine Hubs
 Using `tools/callgraph_impact.py`, all unmatched functions in `SLUS_007.92` and `CIV2.EXE` were ranked by caller fan-in, total call sites, and global data array access frequency. The **38 highest-impact hub functions** (9 in `SLUS_007.92` and 29 in `CIV2.EXE`, accounting for **2,369 call sites** across both executables) were manually decompiled, verified to 100% byte-for-byte identity with `tools/try_match.py`, and spliced into `src/slus/game.c` and `src/civ2/game.c`:
 
@@ -171,14 +196,28 @@ Only the decompilation sources are tracked; the compiler, the disc and the gener
 The end-to-end sweep is three stages, all re-runnable:
 
 ```bash
-python3 tools/gen_m2c_cache.py --jobs 8           # m2c over every nonmatching .s -> /tmp/m2c_cache_*.pkl
+# only the functions that are still unmatched, so the cache is cheap to rebuild
+python3 tools/gen_m2c_cache.py --bin civ2 --jobs 8 --only-file /tmp/unmatched_civ2.txt
 python3 tools/auto_match_sweep.py \
     --bin civ2 --only-file /tmp/unmatched_civ2.txt \
     --opts="-O1 -G8" --opts="-O2 -G8" --opts="-O1 -G0" --opts="-O2 -G0" \
-    --out /tmp/matched_civ2.pkl                   # compile + byte-compare, keep 100% matches
+    --near 10 --out /tmp/matched_civ2.pkl         # compile + byte-compare, keep 100% matches
 python3 tools/splice_matched.py                   # splice verified bodies into src/*/game.c
 make -j$(nproc) && make compare                   # the only result that counts
+
+# second pass: drafts rewritten into the spellings cc1 needs (see section 3b)
+python3 tools/m2c_variants.py --bin civ2
+python3 tools/auto_match_sweep.py --bin civ2 --only-file /tmp/unmatched_civ2.txt \
+    --cache /tmp/m2c_cache_civ2_v2.pkl --enhanced \
+    --opts="-O1 -G8" --opts="-O2 -G8" --opts="-O1 -G0" --near 10 \
+    --out /tmp/matched_civ2_v2.pkl
 ```
+
+Both sweeps are additive and safe: a rewritten draft is only ever *one more
+candidate*. If it does not compile to the retail bytes it is discarded, so a
+wrong rewrite cannot regress the build. The variant pass currently contributes
+4 `CIV2.EXE` matches (`func_80043F10`, `func_800466E4`, `func_800B8DC0`,
+`func_800C6EB4`) that the literal m2c output misses.
 
 `tools/m2c_postprocess.py` holds the shared m2c output normalisation (exact `%lo` access-type
 inference, byte-stride global pointer arithmetic, missing leading argument padding) used by the

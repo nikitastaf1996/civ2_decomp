@@ -671,7 +671,21 @@ INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_80042E98);
 
 INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800436F8);
 
-INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_80043F10);
+void func_80043F10(s32 arg0) {
+    M2C_UNK func_80042938(M2C_UNK *);
+    M2C_UNK func_80042ABC(M2C_UNK *, M2C_UNK);
+    M2C_UNK func_800436F8(M2C_UNK *, s32);
+    M2C_UNK func_80104794(s32);
+    extern s32 D_801589F0;
+    M2C_UNK sp10[250];
+    func_80042938(&sp10);
+    func_800436F8(&sp10, arg0);
+    if (D_801589F0 != 0) {
+        func_80104794(D_801589F0);
+        D_801589F0 = 0;
+    }
+    func_80042ABC(&sp10, 2);
+}
 
 INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_80043F78);
 
@@ -834,7 +848,21 @@ void func_80046688(s32 arg0, M2C_UNK arg1, M2C_UNK arg2) {
     func_800A2A68(&D_8010BC94, arg0, arg2);
 }
 
-INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800466E4);
+void func_800466E4(s32 arg0, M2C_UNK arg1, M2C_UNK arg2) {
+    M2C_UNK func_800A2A68(M2C_UNK *, s32, M2C_UNK);
+    M2C_UNK func_800A2C28(M2C_UNK *, s32, M2C_UNK *);
+    M2C_UNK func_800AB0CC(M2C_UNK *, M2C_UNK *);
+    M2C_UNK func_800C6B2C(M2C_UNK *);
+    M2C_UNK func_800C6DCC(M2C_UNK *, M2C_UNK);
+    extern M2C_UNK D_8010BC94;
+    extern M2C_UNK D_80121340;
+    M2C_UNK sp10[20];
+    func_800C6B2C(&D_80121340);
+    func_800C6DCC(&D_80121340, arg1);
+    func_800AB0CC(&D_80121340, &sp10);
+    func_800A2C28(&D_8010BC94, arg0, &sp10);
+    func_800A2A68(&D_8010BC94, arg0, arg2);
+}
 
 INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_80046774);
 
@@ -2795,7 +2823,37 @@ void func_80092144() {
     func_8007273C();
 }
 
-INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_80092164);
+void func_80092164() {
+    extern s32 D_801588A0;
+    extern s32 D_801588A4;
+    extern s32 D_801588B8;
+    extern s32 D_801588BC;
+    extern s32 D_801588C0;
+    extern s32 D_801588C4;
+    extern s16 D_801588CC;
+    extern s16 D_801588CE;
+    extern s16 D_801588D0;
+    extern s16 D_801588D2;
+    extern s32 D_801588D4;
+    extern s32 D_801588D8;
+    void func_80106C88(s16 *);
+    s32 var_a0;
+    s32 var_a1;
+
+    func_80106C88(&D_801588CC);
+    var_a0 = D_801588D0;
+    var_a1 = D_801588CC;
+    D_801588D4 = (s16) (var_a0 - var_a1);
+    var_a0 = D_801588D2;
+    var_a1 = D_801588CE;
+    D_801588D8 = (s16) (var_a0 - var_a1);
+    D_801588A4 = 0;
+    D_801588A0 = 0xC;
+    D_801588B8 = 0;
+    D_801588BC = 0;
+    D_801588C0 = 0x140;
+    D_801588C4 = 0xF0;
+}
 
 
 void func_800921E8(s32 arg0) {
@@ -2809,7 +2867,31 @@ INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_8009270C);
 
 INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_80092770);
 
-INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800929B8);
+void func_800929B8(void *arg0, void *arg1, s32 arg2) {
+    s32 temp_a3;
+    void *temp_v1;
+    s32 var_a0;
+    s32 var_a1;
+
+    temp_a3 = M2C_FIELD(arg0, s32 *, 0x168);
+    if (temp_a3 < 6) {
+        M2C_FIELD(arg0, s32 *, 0x168) = (s32) (temp_a3 + 1);
+        temp_v1 = arg0 + (temp_a3 * 0x1C);
+        M2C_FIELD(temp_v1, void **, 0x180) = arg1;
+        M2C_FIELD(temp_v1, s32 *, 0x16C) = arg2;
+        /* The two halfwords are loaded into `s32` temporaries before the
+           subtraction: cc1 only picks `lh` (as the retail code does) when the
+           sign-extended load feeds a wider variable, and falls back to
+           `lhu` + shifts when the subtraction is truncated directly. */
+        var_a0 = M2C_FIELD(arg1, s16 *, 0x30);
+        var_a1 = M2C_FIELD(arg1, s16 *, 0x2C);
+        M2C_FIELD(temp_v1, s32 *, 0x178) = (s16) (var_a0 - var_a1);
+        var_a0 = M2C_FIELD(arg1, s16 *, 0x32);
+        var_a1 = M2C_FIELD(arg1, s16 *, 0x2E);
+        M2C_FIELD(temp_v1, s32 *, 0x17C) = (s16) (var_a0 - var_a1);
+        M2C_FIELD(temp_v1, s32 *, 0x184) = 0;
+    }
+}
 
 INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_80092A2C);
 
@@ -5613,7 +5695,47 @@ void func_800B1C28(s32 arg0, s32 arg1) {
     }
 }
 
-INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800B1C78);
+void func_800B1C78(void *arg0, s32 arg1, s32 arg2, void *arg3, s32 arg4) {
+    /* func_80094A2C and func_800B13C0 are defined elsewhere in this file with a
+       different parameter list; bind local aliases to the same symbols so both
+       call sites keep their own (undeclared-promotion-free) prototypes. */
+    M2C_UNK func_80094A2C__800B1C78(void *, M2C_UNK, u16) __asm__("func_80094A2C");
+    M2C_UNK func_800B13C0__800B1C78(void *, u16) __asm__("func_800B13C0");
+    M2C_UNK func_800B1408(void *);
+    M2C_UNK func_800B16F0();
+    s32 func_800B1EE0(void *);
+    M2C_UNK func_800B20E4(void *, s16);
+    M2C_UNK func_800B2160(void *, s16);
+    s32 var_a1;
+    s32 var_v0;
+
+    if (M2C_FIELD(arg0, s32 *, 0x30) & 0x20) {
+        func_800B16F0();
+        func_800B1408(arg0);
+        func_800B13C0__800B1C78(arg0, M2C_FIELD(arg0, u16 *, 0x1A6));
+    } else {
+        func_80094A2C__800B1C78(arg0 + 0x198, 9, M2C_FIELD(arg0, u16 *, 0x1A6));
+    }
+    M2C_FIELD(arg0, s32 *, 0x98) = func_800B1EE0(arg0);
+    M2C_FIELD(arg0, s32 *, 0) = arg1;
+    M2C_FIELD(arg0, s32 *, 0xBC) = 0;
+    M2C_FIELD(arg0, s32 *, 0x30) = arg4;
+    if (arg3 != NULL) {
+        M2C_FIELD(arg0, s32 *, 0xCC) = (s32) M2C_FIELD(arg3, s16 *, 0);
+        M2C_FIELD(arg0, s32 *, 0xD0) = (s32) M2C_FIELD(arg3, s16 *, 2);
+        var_a1 = M2C_FIELD(arg3, s16 *, 4);
+        var_v0 = M2C_FIELD(arg3, s16 *, 0);
+        func_800B20E4(arg0, (s16) (var_a1 - var_v0));
+        var_a1 = M2C_FIELD(arg3, s16 *, 6);
+        var_v0 = M2C_FIELD(arg3, s16 *, 2);
+        func_800B2160(arg0, (s16) (var_a1 - var_v0));
+    } else {
+        func_800B20E4(arg0, 0x1B8);
+    }
+    if (arg1 != 0) {
+        M2C_FIELD(arg0, s32 *, 0x30) = (s32) (M2C_FIELD(arg0, s32 *, 0x30) | 0x10);
+    }
+}
 
 INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800B1DA4);
 
@@ -6156,7 +6278,20 @@ s32 func_800B8C60(arg0, arg1, arg2)
 
 INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800B8D08);
 
-INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800B8DC0);
+s32 func_800B8DC0(s32 arg0, M2C_UNK arg1, s16 arg2) {
+    s32 func_800B8D08(s32, M2C_UNK, M2C_UNK, M2C_UNK *);
+    s32 func_800E1E44(M2C_UNK *);
+    M2C_UNK func_800F5254(s16, M2C_UNK *, M2C_UNK);
+    extern M2C_UNK D_8011FCF8;
+    extern s32 D_8011FF28;
+    M2C_UNK sp10[6];
+    s32 temp_s0;
+
+    func_800F5254(arg2, &sp10, 0xA);
+    temp_s0 = func_800B8D08(arg0, arg1, 5, &sp10);
+    D_8011FF28 = func_800E1E44(&D_8011FCF8);
+    return temp_s0;
+}
 
 
 void func_800B8E34() {
@@ -6659,7 +6794,26 @@ void func_800C6E70(s32 arg0, s16 arg1) {
     func_800E1E64(arg0, sp10);
 }
 
-INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800C6EB4);
+void func_800C6EB4(s32 arg0, s16 arg1) {
+    M2C_UNK func_800E1E64(s32, M2C_UNK *);
+    s32 func_800E1EB4(M2C_UNK *);
+    M2C_UNK func_800F5254(s16, M2C_UNK *, M2C_UNK);
+    extern M2C_UNK D_801590E8;
+    M2C_UNK sp10[8];
+    s32 temp_v0;
+    s32 var_s0;
+
+    func_800F5254(arg1, &sp10, 2);
+    temp_v0 = func_800E1EB4(&sp10);
+    var_s0 = 0;
+    if ((8 - temp_v0) > 0) {
+        do {
+            func_800E1E64(arg0, &D_801590E8);
+            var_s0 += 1;
+        } while (var_s0 < (8 - temp_v0));
+    }
+    func_800E1E64(arg0, &sp10);
+}
 
 
 void func_800C6F4C(s32 arg0, s32 arg1) {

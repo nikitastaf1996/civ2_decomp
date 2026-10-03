@@ -29,11 +29,14 @@ def compile_one(args):
 
 
 
-def sweep(binary, exe_name, opts_to_test, only=None, out_path=None, near_limit=3):
+def sweep(binary, exe_name, opts_to_test, only=None, out_path=None, near_limit=3,
+          cache=None, pre_enhanced=False):
     opts_to_test = list(opts_to_test)
-    m2c_res = pickle.load(open(f"/tmp/m2c_cache_{binary}.pkl", "rb"))
+    m2c_res = pickle.load(open(cache or f"/tmp/m2c_cache_{binary}.pkl", "rb"))
     files = sorted(glob.glob(f"{D}/asm/us/{binary}/nonmatchings/game/func_*.s"))
-    valid_m2c = [(n, f, enhance_c(binary, n, f, c)) for (n, f, c) in m2c_res if c and f" {n}(" in c]
+    # `pre_enhanced` caches (tools/m2c_variants.py) already hold the enhanced draft.
+    valid_m2c = [(n, f, c if pre_enhanced else enhance_c(binary, n, f, c))
+                 for (n, f, c) in m2c_res if c and f" {n}(" in c]
     if only is not None:
         valid_m2c = [t for t in valid_m2c if t[0] in only]
         print(f"  [filter] testing {len(valid_m2c)} of {len(m2c_res)} cached functions")
@@ -189,6 +192,12 @@ def main(argv=None):
     ap.add_argument("--only-file", default=None,
                     help="File with one function name per line; restrict the sweep to those functions.")
     ap.add_argument("--out", default=None, help="Output pickle path (default /tmp/matched_<bin>.pkl)")
+    ap.add_argument("--cache", default=None,
+                    help="Alternate m2c draft cache (e.g. /tmp/m2c_cache_civ2_v2.pkl from "
+                         "tools/m2c_variants.py). Default /tmp/m2c_cache_<bin>.pkl")
+    ap.add_argument("--enhanced", action="store_true",
+                    help="The cache already holds enhanced drafts; do not re-run the m2c "
+                         "post-processing over them.")
     ap.add_argument("--near", type=int, default=3,
                     help="Also record near-misses with up to this many differing instructions (default 3). "
                          "Raising it turns the sweep into a triage tool: the recorded list is the cheapest "
@@ -204,7 +213,8 @@ def main(argv=None):
         if args.binary and binary != args.binary:
             continue
         out = args.out or f"/tmp/matched_{binary}.pkl"
-        sweep(binary, exe_name, opts, only=only, out_path=out, near_limit=args.near)
+        sweep(binary, exe_name, opts, only=only, out_path=out, near_limit=args.near,
+              cache=args.cache, pre_enhanced=args.enhanced)
 
 
 if __name__ == "__main__":
