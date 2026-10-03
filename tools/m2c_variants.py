@@ -375,6 +375,186 @@ def fix_unsigned_byte_constants(body):
     return body if changed else None
 
 
+# m2c's rendering of a variable index off a global:
+#     *(T *)(((s8 *)&SYM) + EXPR)
+PTR_ARITH_HEAD = re.compile(
+    r"\*\(\s*(?P<ty>\w+)\s*\*\s*\)\s*\(\s*\(\s*\(s8 \*\)\s*&\s*(?P<sym>\w+)\s*\)\s*\+\s*")
+SCALE_RE = re.compile(r"^(?P<base>.+?)\s*\*\s*(?P<n>0[xX][0-9A-Fa-f]+|\d+)$")
+
+
+def _strip_outer_parens(text):
+    """Drop the parentheses that wrap a whole expression, and only those."""
+    text = text.strip()
+    while text.startswith("(") and _balanced_end(text, 0) == len(text):
+        text = text[1:-1].strip()
+    return text
+
+
+def _balanced(body, start, open_depth=1):
+    """Return (text, end) for the group that starts open at `start`."""
+    depth, i = open_depth, start
+    while i < len(body) and depth:
+        c = body[i]
+        if c in "([":
+            depth += 1
+        elif c in ")]":
+            depth -= 1
+        i += 1
+    return body[start:i - 1], i
+
+
+def arrayify_indexed(body):
+    """Rewrite `*(T *)(((s8 *)&SYM) + EXPR)` as `SYM[IDX]` with an array declaration.
+
+    cc1 emits `lb $2, SYM($3)` for an array index and the maspsx wrapper expands it
+    into the retail `lui $at,%hi(SYM)` / `addu $at,$at,$3` / `lb $2,%lo(SYM)($at)`
+    sequence.  The pointer-arithmetic spelling produces the same three instructions
+    but *without* the `%lo` relocation, and it also fixes the order in which the
+    operands are evaluated, so drafts that look right stop matching on a handful of
+    registers.  407 of the 772 unmatched CIV2 functions carry this shape.
+
+    The byte offset m2c prints is scaled by the access type; for `s8`/`u8` the index
+    is the offset itself, and for wider types it is only rewritten when the offset is
+    literally `X * sizeof` (a division would not survive cc1's own folding).  A symbol
+    is only rewritten when *every* access to it has the same type and none of its
+    other uses is a scalar read.
+    """
+    occurrences = {}
+    for m in PTR_ARITH_HEAD.finditer(body):
+        expr, end = _balanced(body, m.end())
+        occurrences.setdefault(m.group("sym"), []).append(
+            (m.start(), end, m.group("ty"), expr))
+
+    if not occurrences:
+        return None
+
+    edits = []
+    for sym, hits in occurrences.items():
+        types = {t for _, _, t, _ in hits}
+        if len(types) != 1:
+            continue
+        ty = types.pop()
+        size = TYPE_ALIGN.get(ty, 4)
+        indices = []
+        for start, end, _t, expr in hits:
+            if size == 1:
+                indices.append((start, end, expr))
+                continue
+            m = SCALE_RE.match(_strip_outer_parens(expr))
+            if not m or int(m.group("n"), 0) != size:
+                break
+            indices.append((start, end, m.group("base").strip()))
+        if len(indices) != len(hits):
+            continue
+        # Every other mention of the symbol must be an address taken for a call.
+        residual = body
+        for start, end, _ in indices:
+            residual = residual.replace(body[start:end], "\0" * (end - start), 1)
+        decl_re = re.compile(r"^extern\s+\w+\s+" + re.escape(sym) + r";[ \t]*$", re.M)
+        if not decl_re.search(residual):
+            continue
+        residual = decl_re.sub("", residual)
+        residual = re.sub(r"&" + re.escape(sym) + r"\b", "", residual)
+        if re.search(r"\b" + re.escape(sym) + r"\b", residual):
+            continue
+        d = decl_re.search(body)
+        edits.append((d.start(), d.end(), f"extern {ty} {sym}[];"))
+        edits.extend((start, end, f"{sym}[{idx}]") for start, end, idx in indices)
+
+    if not edits:
+        return None
+    # Every mutation is applied in one descending pass: rewriting a declaration
+    # first shortens the body and invalidates the offsets recorded for the
+    # accesses that follow it.
+    for start, end, rep in sorted(edits, key=lambda e: e[0], reverse=True):
+        body = body[:start] + rep + body[end:]
+    return body
+
+
+# `(void *)&D_80133CF4` -- m2c renders a global address added into a computed sum as
+# the *second* operand of a nested addition.
+ADDR_TERM_RE = re.compile(r"\(\s*(?:void|s32|u32|s16|u16|s8|u8)\s*\*?\s*\)\s*&\s*(?P<sym>\w+)")
+
+
+def _operand_start(text, end):
+    """Start index of the operand that ends just before `end` (whitespace skipped)."""
+    i = end
+    while i > 0 and text[i - 1] in " \t\n":
+        i -= 1
+    if i and text[i - 1] == ")":
+        depth = 0
+        while i > 0:
+            i -= 1
+            if text[i] == ")":
+                depth += 1
+            elif text[i] == "(":
+                depth -= 1
+                if depth == 0:
+                    return i
+        return 0
+    while i > 0 and (text[i - 1].isalnum() or text[i - 1] in "_."):
+        i -= 1
+    return i
+
+
+def _balanced_end(text, open_idx):
+    """Index just past the group that opens at `open_idx`."""
+    depth = 0
+    for i in range(open_idx, len(text)):
+        if text[i] in "([":
+            depth += 1
+        elif text[i] in ")]":
+            depth -= 1
+            if depth == 0:
+                return i + 1
+    return len(text)
+
+
+def fix_address_term_order(body):
+    """Move a global-address term to the front of its addition chain.
+
+    m2c renders `addr + A + B` as `A + (B + addr)`, and cc1 then evaluates the `B`
+    term first; the retail order is the opposite, and it decides which register each
+    scaled term lands in.  Rewriting the sum as `(addr + A) + B` restores both the
+    evaluation order and the register assignment (func_800B8E8C).  ~170 accesses in
+    the unmatched CIV2 drafts share this shape -- it is the companion of the `$at`
+    expansion, which is why the two appear together.
+    """
+    def skip_ws_back(pos):
+        while pos > 0 and body[pos - 1] in " \t\n":
+            pos -= 1
+        return pos
+
+    changed = False
+    for m in reversed(list(ADDR_TERM_RE.finditer(body))):
+        addr = m.group(0)
+        # Structure: `<L> + ( <R> + <addr> )`.
+        plus2 = skip_ws_back(m.start())
+        if plus2 == 0 or body[plus2 - 1] != "+":
+            continue
+        r_end = plus2 - 1
+        r_start = _operand_start(body, r_end)
+        open_inner = skip_ws_back(r_start)
+        if open_inner == 0 or body[open_inner - 1] != "(":
+            continue
+        open_inner -= 1
+        close_inner = _balanced_end(body, open_inner)
+        if body[m.end():close_inner - 1].strip():
+            continue
+        plus1 = skip_ws_back(open_inner)
+        if plus1 == 0 or body[plus1 - 1] != "+":
+            continue
+        l_end = plus1 - 1
+        l_start = _operand_start(body, l_end)
+        l_text = body[l_start:l_end].strip()
+        r_text = body[r_start:r_end].strip()
+        if not l_text or not r_text:
+            continue
+        body = body[:l_start] + f"({addr} + {l_text}) + {r_text}" + body[close_inner:]
+        changed = True
+    return body if changed else None
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--bin", dest="binary", choices=["slus", "civ2"], default="civ2")
@@ -382,7 +562,7 @@ def main() -> int:
     ap.add_argument("--out", dest="dst", default=None)
     ap.add_argument("--only-file", default=None,
                     help="File with one function name per line; rewrite only those.")
-    ap.add_argument("--passes", default="sdiv,stack,halfword,rmw,initorder,ubyte",
+    ap.add_argument("--passes", default="sdiv,stack,halfword,rmw,initorder,ubyte,arrindex,addrfirst",
                     help="Comma-separated rewrite passes to apply (stack, halfword, rmw, "
                          "struct). Each pass is optional, so several caches can be built and "
                          "swept independently instead of betting on one chain.")
@@ -424,6 +604,8 @@ def main() -> int:
             ("rmw", fix_read_modify_write),
             ("initorder", fix_init_order),
             ("ubyte", fix_unsigned_byte_constants),
+            ("arrindex", arrayify_indexed),
+            ("addrfirst", fix_address_term_order),
             ("struct", structify_globals),
         )
         fired = []
