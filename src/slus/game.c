@@ -162,7 +162,49 @@ void func_800195D8(void *arg0, u16 *arg1, u16 *arg2, s32 arg3) {
     M2C_FIELD(arg0, s32 *, 0x2C) = (s32) ((s32) (M2C_FIELD(arg0, s32 *, 8) - M2C_FIELD(arg0, s32 *, 0x20)) / arg3);
 }
 
-INCLUDE_ASM("asm/us/slus/nonmatchings/game", func_80019740);
+s16 func_80019740(void *arg0) {
+    s32 temp_v0;
+    s32 temp_v0_2;
+    s32 temp_v0_3;
+    s32 var_a1;
+    s32 var_a2;
+    s32 var_v1;
+
+    M2C_FIELD(arg0, s32 *, 0xC) = (s32) (M2C_FIELD(arg0, s32 *, 0xC) - M2C_FIELD(arg0, s32 *, 0x24));
+    M2C_FIELD(arg0, s32 *, 0x10) = (s32) (M2C_FIELD(arg0, s32 *, 0x10) - M2C_FIELD(arg0, s32 *, 0x28));
+    M2C_FIELD(arg0, s32 *, 0x14) = (s32) (M2C_FIELD(arg0, s32 *, 0x14) - M2C_FIELD(arg0, s32 *, 0x2C));
+    temp_v0 = M2C_FIELD(arg0, s32 *, 0xC);
+    var_a2 = temp_v0 / 0x1000;
+    if (var_a2 >= 0x20) {
+        M2C_FIELD(arg0, s32 *, 0xC) = 0x1F000;
+        var_a2 = 0x1F;
+    }
+    if (var_a2 < 0) {
+        M2C_FIELD(arg0, s32 *, 0xC) = 0;
+        var_a2 = 0;
+    }
+    temp_v0_2 = M2C_FIELD(arg0, s32 *, 0x10);
+    var_a1 = temp_v0_2 / 0x1000;
+    if (var_a1 >= 0x20) {
+        M2C_FIELD(arg0, s32 *, 0x10) = 0x1F000;
+        var_a1 = 0x1F;
+    }
+    if (var_a1 < 0) {
+        M2C_FIELD(arg0, s32 *, 0x10) = 0;
+        var_a1 = 0;
+    }
+    temp_v0_3 = M2C_FIELD(arg0, s32 *, 0x14);
+    var_v1 = temp_v0_3 / 0x1000;
+    if (var_v1 >= 0x20) {
+        M2C_FIELD(arg0, s32 *, 0x14) = 0x1F000;
+        var_v1 = 0x1F;
+    }
+    if (var_v1 < 0) {
+        M2C_FIELD(arg0, s32 *, 0x14) = 0;
+        var_v1 = 0;
+    }
+    return (s16) (var_a2 | (var_a1 << 5) | (var_v1 << 0xA));
+}
 
 
 void func_80019858() {
@@ -403,7 +445,18 @@ s32 func_8001B250() {
     return D_800552A8 & 0xFFFF;
 }
 
-INCLUDE_ASM("asm/us/slus/nonmatchings/game", func_8001B2EC);
+void func_8001B2EC() {
+    M2C_UNK func_8002D97C(s32);                         /* extern */
+    extern s32 D_8005525C;
+    extern u32 D_8005652C;
+    s32 t;
+
+    if (D_8005525C == 0) {
+        t = ((u32) D_8005652C >> 0x10) + 1;
+        func_8002D97C(t + D_8005652C);
+    }
+    D_8005525C = 1;
+}
 
 
 s32 func_8001B338() {

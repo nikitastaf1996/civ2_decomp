@@ -206,12 +206,14 @@ def structify_globals(body):
     for sym, hits in accesses.items():
         if len(hits) < 2:
             continue
-        # The symbol may only appear in these field accesses...
-        other = len(re.findall(r"\b" + re.escape(sym) + r"\b", body)) - len(hits)
-        # ...plus its own declaration.
+        # The symbol may only appear in these field accesses, in its own declaration,
+        # or as an address taken for a call (`&SYM` still yields the struct's address).
         decl_re = re.compile(r"^extern\s+\w+\s+" + re.escape(sym) + r";[ \t]*$", re.M)
         decls = decl_re.findall(body)
-        if other != len(decls):
+        residual = FIELD_ACCESS_RE.sub("", body)
+        residual = decl_re.sub("", residual)
+        residual = re.sub(r"&" + re.escape(sym) + r"\b", "", residual)
+        if re.search(r"\b" + re.escape(sym) + r"\b", residual):
             continue
         hits = sorted(hits)
         # Natural alignment: cc1 would insert padding we did not ask for.
@@ -269,6 +271,110 @@ def fix_init_order(body):
     return out if n else None
 
 
+# m2c's hand-expansion of cc1's signed division by a power of two:
+#     var = t >> N;  if (t < 0) { var = (s32) (t + (2**N - 1)) >> N; }
+SIGNED_DIV_RE = re.compile(
+    r"^(?P<i>[ \t]*)(?P<v>\w+) = (?P<t>\w+) >> (?P<n>0x[0-9A-Fa-f]+|\d+);[ \t]*\n"
+    r"(?P=i)if \((?P=t) < 0\) \{[ \t]*\n"
+    r"(?P=i)[ \t]+(?P=v) = \(s32\) ?\((?P=t) \+ (?P<k>0x[0-9A-Fa-f]+|\d+)\) >> (?P=n);[ \t]*\n"
+    r"(?P=i)\}",
+    re.M,
+)
+
+
+def fix_signed_division(body):
+    """Collapse m2c's shift + rounding-if back into the division it expands.
+
+    cc1 lowers `x / 4096` (signed, positive power of two) to
+    `bgez x, L; sra d, x, N; addiu x, 0xFFF; sra d, x, N`, and m2c renders that
+    as an explicit `if`.  Written back as a division, cc1 reproduces the retail
+    bytes exactly -- including the rounding add that writes to the *source*
+    register rather than the destination.  This is what matched func_80019740.
+    """
+    def repl(m):
+        n = int(m.group("n"), 0)
+        k = int(m.group("k"), 0)
+        if k != (1 << n) - 1:
+            return m.group(0)
+        return f"{m.group('i')}{m.group('v')} = {m.group('t')} / 0x{1 << n:X};"
+
+    out, n = SIGNED_DIV_RE.subn(repl, body)
+    return out if n else None
+
+
+def arrayify_globals(body):
+    """Declare a fixed-offset global as an array so cc1 folds the offset into the access.
+
+    The mirror image of `structify_globals`: `M2C_FIELD(&D_8012A0E0, s8 *, 0x257E)`
+    with a scalar declaration makes cc1 materialise `SYM + 0x257E` in a register and
+    then store at offset zero, while the retail build keeps the symbol address clean
+    and uses `0x257E($v1)` as the store displacement -- which is what an *array*
+    declaration produces (`D_8012A0E0[0x257E] = 0x40;`).  The symbol may still be
+    referenced by address (`func_8001B074(&D_8012A0E0, ...)`) since the array
+    decays to the same address.  This is what func_80020B10 needs.
+    """
+    accesses = {}
+    for m in FIELD_ACCESS_RE.finditer(body):
+        accesses.setdefault(m.group("sym"), []).append(
+            (int(m.group("off"), 0), m.group("ty")))
+    if not accesses:
+        return None
+
+    changed = False
+    for sym, hits in accesses.items():
+        types = {t for _, t in hits}
+        if len(types) != 1:
+            continue
+        ty = types.pop()
+        size = TYPE_ALIGN.get(ty, 4)
+        if any(off % size for off, _ in hits):
+            continue
+        # Every other mention must be an address taken for a call (`&SYM`), never a
+        # scalar read: those would still work, but the pass should stay predictable.
+        masked = FIELD_ACCESS_RE.sub("", body)
+        decl_re = re.compile(r"^extern\s+\w+\s+" + re.escape(sym) + r";[ \t]*$", re.M)
+        if not decl_re.search(masked):
+            continue
+        masked = decl_re.sub("", masked)
+        masked = re.sub(r"&" + re.escape(sym) + r"\b", "", masked)
+        if re.search(r"\b" + re.escape(sym) + r"\b", masked):
+            continue
+        body = decl_re.sub(f"extern {ty} {sym}[];", body, count=1)
+        for off, t in hits:
+            idx = off // size if size > 1 else off
+            body = body.replace(f"M2C_FIELD(&{sym}, {t} *, 0x{off:X})", f"{sym}[{idx}]")
+            body = body.replace(f"M2C_FIELD(&{sym}, {t} *, {off})", f"{sym}[{idx}]")
+        changed = True
+    return body if changed else None
+
+
+# `extern s8 SYM;` with `SYM = 0xE0;` -- cc1 folds the constant to -32 for a signed
+# byte, but the retail build materialises 0xE0 itself (`addiu $v0,$zero,0xE0`).
+UNSIGNED_CONST_RE = re.compile(r"^extern s8 (\w+);[ \t]*$", re.M)
+
+
+def fix_unsigned_byte_constants(body):
+    """Declare byte-wide globals whose constants are >= 0x80 as `u8`.
+
+    Same rule as the `u8`/`s8` field idiom already in the README, applied to scalar
+    stores: `-32` and `0xE0` are the same byte but only one of them assembles to the
+    retail `addiu`.  Affects both the declaration and every `M2C_FIELD(..., s8 *, ...)`
+    access to the same symbol, since both decide how the constant is materialised.
+    """
+    changed = False
+    for m in list(UNSIGNED_CONST_RE.finditer(body)):
+        sym = m.group(1)
+        if not re.search(rf"\b{sym} = (?:0x[89A-Fa-f][0-9A-Fa-f]|2[0-5][0-9]);", body):
+            continue
+        # m2c can declare the same global twice in one draft (a block of externs
+        # at the top for the arguments, more inside the body); both must change or
+        # the TU fails with "conflicting types".
+        body = re.sub(rf"^extern s8 {sym};[ \t]*$", f"extern u8 {sym};", body, flags=re.M)
+        body = body.replace(f"M2C_FIELD(&{sym}, s8 *, ", f"M2C_FIELD(&{sym}, u8 *, ")
+        changed = True
+    return body if changed else None
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--bin", dest="binary", choices=["slus", "civ2"], default="civ2")
@@ -276,7 +382,7 @@ def main() -> int:
     ap.add_argument("--out", dest="dst", default=None)
     ap.add_argument("--only-file", default=None,
                     help="File with one function name per line; rewrite only those.")
-    ap.add_argument("--passes", default="stack,halfword,rmw,initorder",
+    ap.add_argument("--passes", default="sdiv,stack,halfword,rmw,initorder,ubyte",
                     help="Comma-separated rewrite passes to apply (stack, halfword, rmw, "
                          "struct). Each pass is optional, so several caches can be built and "
                          "swept independently instead of betting on one chain.")
@@ -312,10 +418,12 @@ def main() -> int:
         # alone, and a variant that does not compile to the retail bytes is
         # discarded by the sweep anyway.
         passes = (
+            ("sdiv", fix_signed_division),
             ("stack", lambda c: fix_stack_object_sizes(asm_text, c)),
             ("halfword", lambda c: widen_signed_halfword_subtract(c, [0])),
             ("rmw", fix_read_modify_write),
             ("initorder", fix_init_order),
+            ("ubyte", fix_unsigned_byte_constants),
             ("struct", structify_globals),
         )
         fired = []
