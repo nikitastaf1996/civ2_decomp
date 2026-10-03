@@ -44,7 +44,14 @@ s32 func_800142B4() {
     return 0;
 }
 
-INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800142BC);
+/* Returns the low byte of the incoming $v0: cc1 materialises the u8 truncation of
+   an uninitialised local in $v0, so the whole body is a single `andi`.
+   Nothing in either executable calls it. */
+u8 func_800142BC() {
+    u8 var_v0;
+
+    return var_v0;
+}
 
 void func_800142C4() {
 
@@ -1099,7 +1106,36 @@ INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_80062E08);
 
 INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_8006366C);
 
-INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_80065F98);
+/* Field block reached through a materialised base: cc1 only keeps the symbol
+   address in a general register (instead of folding every access into
+   `%lo(SYM+N)($at)`) when the accesses are struct member references. */
+struct S_8011A390 {
+    s16 f_00;
+    s8 f_02;
+    char _pad_03[0x4F];
+    s16 f_52;
+    s16 f_54;
+    s16 f_56;
+    s16 f_58;
+    s16 f_5A;
+};
+
+void func_80065F98() {
+    extern struct S_8011A390 D_8011A390;
+    extern s16 D_8011A3EC[];
+    s32 var_v1;
+
+    D_8011A390.f_00 = 0;
+    D_8011A390.f_02 = 0;
+    D_8011A390.f_52 = 10;
+    D_8011A390.f_54 = 0;
+    D_8011A390.f_56 = 0;
+    D_8011A390.f_58 = 0;
+    D_8011A390.f_5A = 0;
+    for (var_v1 = 0; var_v1 < 4; var_v1++) {
+        D_8011A3EC[var_v1] = 0;
+    }
+}
 
 
 void func_80065FF0() {
@@ -1948,7 +1984,29 @@ void func_8007D6C4(s32 arg0) {
     } while (var_s0 < 8);
 }
 
-INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_8007D750);
+s32 func_8007D750(s32 arg0, s32 arg1) {
+    extern u8 D_8010D6BA[];
+    s32 func_8007B6FC(s32);
+    s32 func_8007B798();
+    s32 var_a0;
+    s32 var_s0;
+
+    var_s0 = 0;
+    var_a0 = func_8007B798();
+    if (var_a0 >= 0) {
+    loop:
+        if (D_8010D6BA[var_a0 * 0x1A] == arg1) {
+            var_s0 = 1;
+            goto end;
+        }
+        var_a0 = func_8007B6FC(var_a0);
+        if (var_a0 >= 0) {
+            goto loop;
+        }
+    }
+end:
+    return var_s0;
+}
 
 INCLUDE_RODATA("asm/us/civ2/nonmatchings/game", D_80010D88);
 
@@ -7179,7 +7237,20 @@ void func_800CEF1C(s32 arg0, s32 *arg1, s32 *arg2) {
     *arg2 = 1 << (arg0 & 7);
 }
 
-INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800CEF38);
+/* `~arg1 + 1` instead of `-arg1`: the negation idiom is written out so that cc1
+   emits `nor` + `addiu` rather than a single `negu`. */
+s32 func_800CEF38(s32 arg0, s32 arg1) {
+    s32 var_v0;
+
+    if (arg1 == 0) {
+        var_v0 = arg0;
+    } else if (arg1 > 0) {
+        var_v0 = arg0 << arg1;
+    } else {
+        var_v0 = arg0 >> (~arg1 + 1);
+    }
+    return var_v0;
+}
 
 INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800CEF5C);
 

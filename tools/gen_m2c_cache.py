@@ -53,17 +53,37 @@ def main() -> int:
     ap.add_argument("--bin", dest="binary", choices=sorted(BINARIES), default=None)
     ap.add_argument("--jobs", type=int, default=max(1, (os.cpu_count() or 2) - 1))
     ap.add_argument("--force", action="store_true", help="ignore existing cache")
+    ap.add_argument(
+        "--only-file",
+        default=None,
+        help=(
+            "File with one function name per line; decompile only those (plus any already "
+            "cached entries, which are carried over). Use this to skip the hundreds of "
+            "functions that are already matched and would only be re-derived identically."
+        ),
+    )
     args = ap.parse_args()
+
+    only = None
+    if args.only_file:
+        only = {line.strip() for line in open(args.only_file) if line.strip()}
 
     targets = [args.binary] if args.binary else sorted(BINARIES)
     for binary in targets:
         cache = f"/tmp/m2c_cache_{binary}.pkl"
+        carried = []
         if os.path.exists(cache) and not args.force:
-            n = len(pickle.load(open(cache, "rb")))
-            print(f"[{binary}] cache exists ({n} entries); use --force to rebuild")
-            continue
+            if only is None:
+                n = len(pickle.load(open(cache, "rb")))
+                print(f"[{binary}] cache exists ({n} entries); use --force to rebuild")
+                continue
+            carried = [r for r in pickle.load(open(cache, "rb")) if r[0] not in only]
 
         files = sorted(glob.glob(os.path.join(ROOT, "asm", "us", binary, "nonmatchings", "game", "func_*.s")))
+        if only is not None:
+            before = len(files)
+            files = [f for f in files if os.path.basename(f)[:-2] in only]
+            print(f"[{binary}] --only-file restricted {before} -> {len(files)} functions")
         print(f"[{binary}] decompiling {len(files)} functions with {args.jobs} jobs ...")
         with Pool(args.jobs) as pool:
             results = []
@@ -72,8 +92,8 @@ def main() -> int:
                 if i % 100 == 0:
                     print(f"  {i}/{len(files)}", flush=True)
         ok = sum(1 for _, _, c in results if c)
-        pickle.dump(results, open(cache, "wb"))
-        print(f"[{binary}] {ok}/{len(files)} decompiled -> {cache}")
+        pickle.dump(carried + results, open(cache, "wb"))
+        print(f"[{binary}] {ok}/{len(files)} decompiled ({len(carried)} carried over) -> {cache}")
     return 0
 
 

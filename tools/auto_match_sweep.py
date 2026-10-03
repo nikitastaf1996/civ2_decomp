@@ -29,7 +29,7 @@ def compile_one(args):
 
 
 
-def sweep(binary, exe_name, opts_to_test, only=None, out_path=None):
+def sweep(binary, exe_name, opts_to_test, only=None, out_path=None, near_limit=3):
     opts_to_test = list(opts_to_test)
     m2c_res = pickle.load(open(f"/tmp/m2c_cache_{binary}.pkl", "rb"))
     files = sorted(glob.glob(f"{D}/asm/us/{binary}/nonmatchings/game/func_*.s"))
@@ -159,7 +159,7 @@ def sweep(binary, exe_name, opts_to_test, only=None, out_path=None):
             if nd == 0:
                 matches.append(name)
                 all_matched.setdefault(name, (opt, c_map[name]))
-            elif nd <= 3:
+            elif nd <= near_limit:
                 near1 += 1
                 if name not in near_misses or nd < near_misses[name][0]:
                     near_misses[name] = (nd, opt)
@@ -171,7 +171,7 @@ def sweep(binary, exe_name, opts_to_test, only=None, out_path=None):
     with open(nm_path, "w") as f:
         for name, (nd, opt) in sorted(near_misses.items(), key=lambda kv: (kv[1][0], kv[0])):
             f.write(f"{nd} {opt} {name}\n")
-    print(f"  ==> {len(near_misses)} near-misses (<=3 diffs) written to {nm_path}")
+    print(f"  ==> {len(near_misses)} near-misses (<={near_limit} diffs) written to {nm_path}")
     print(f"  ==> Total unique 100% matched {exe_name} functions: {len(all_matched)}/{len(files)} ({100*len(all_matched)/len(files):.1f}%)\n")
     return all_matched
 
@@ -189,6 +189,10 @@ def main(argv=None):
     ap.add_argument("--only-file", default=None,
                     help="File with one function name per line; restrict the sweep to those functions.")
     ap.add_argument("--out", default=None, help="Output pickle path (default /tmp/matched_<bin>.pkl)")
+    ap.add_argument("--near", type=int, default=3,
+                    help="Also record near-misses with up to this many differing instructions (default 3). "
+                         "Raising it turns the sweep into a triage tool: the recorded list is the cheapest "
+                         "place for a manual pass to start.")
     args = ap.parse_args(argv)
 
     opts = args.opts or DEFAULT_OPTS
@@ -200,7 +204,7 @@ def main(argv=None):
         if args.binary and binary != args.binary:
             continue
         out = args.out or f"/tmp/matched_{binary}.pkl"
-        sweep(binary, exe_name, opts, only=only, out_path=out)
+        sweep(binary, exe_name, opts, only=only, out_path=out, near_limit=args.near)
 
 
 if __name__ == "__main__":
