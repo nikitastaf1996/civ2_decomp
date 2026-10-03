@@ -97,6 +97,76 @@ def fix_stack_object_sizes(asm_text, body):
     return body if changed else None
 
 
+# `var = M2C_FIELD(p, T *, off) OP rhs;` -- m2c lifts the result of an in-place
+# field update into a temporary.
+RMW_ASSIGN_RE = re.compile(
+    r"^(?P<indent>[ \t]*)(?P<var>[A-Za-z_]\w*)\s*=\s*"
+    r"M2C_FIELD\((?P<expr>.+?), (?P<ty>\w+) \*, (?P<off>0x[0-9A-Fa-f]+|\d+)\)\s*"
+    r"(?P<op>[|&^+\-])\s*(?P<rhs>.+?);[ \t]*$",
+    re.M,
+)
+SCALAR_DECL_RE = (
+    r"^[ \t]*(?:s32|u32|M2C_UNK|M2C_UNK32|s16|u16|s8|u8) %s;[ \t]*$"
+)
+
+
+def fix_read_modify_write(body):
+    """Fold `var = FIELD OP rhs;` (one per branch) + `FIELD = var;` into `FIELD OP= rhs;`.
+
+    cc1 emits a shared load/store for the compound form: the value is loaded into
+    `$v0`, the constant into `$v1` and the result stored once.  Lifting the
+    expression into a temporary instead makes cc1 allocate the constant to `$v0`,
+    which reverses the operands of the `and`/`or` (`and $v0,$v1,$v0` instead of
+    `and $v0,$v0,$v1`) and costs a three-instruction near miss.  This is what
+    matched func_800A2910, func_800A29BC and func_800986D0, where each arm of an
+    if/else computes the same field and the result is stored once afterwards.
+    """
+    groups = {}
+    for m in RMW_ASSIGN_RE.finditer(body):
+        field = (f"M2C_FIELD({m.group('expr')}, {m.group('ty')} *, "
+                 f"{m.group('off')})")
+        groups.setdefault(m.group("var"), []).append((m, field))
+
+    splice = []
+    dead = []
+    for var, entries in groups.items():
+        field = entries[0][1]
+        if any(f != field for _, f in entries):
+            continue
+        store = f"{field} = {var};"
+        if body.count(store) != 1:
+            continue
+        # Any other use of the temporary would make the fold observable: the
+        # variable may only be declared, assigned by these matches and stored.
+        uses = len(re.findall(r"\b" + re.escape(var) + r"\b", body))
+        decls = len(re.findall(SCALAR_DECL_RE % re.escape(var), body, re.M))
+        if uses != decls + len(entries) + 1:
+            continue
+        pos = body.find(store)
+        line_start = body.rfind("\n", 0, pos) + 1
+        line_end = body.find("\n", pos) + 1 or len(body)
+        if body[line_start:pos].strip():  # not alone on its line: leave it alone
+            continue
+        splice.append((line_start, line_end, ""))
+        for m, _ in entries:
+            splice.append((m.start(), m.end(),
+                           f"{m.group('indent')}{field} {m.group('op')}= {m.group('rhs')};"))
+        if decls == 1:
+            dead.append(var)
+
+    if not splice:
+        return None
+    # Apply every edit right to left so the recorded offsets stay valid.
+    for start, end, rep in sorted(splice, key=lambda e: e[0], reverse=True):
+        body = body[:start] + rep + body[end:]
+    # The temporaries are dead now; their declarations would be unused locals.
+    for var in dead:
+        m = re.search(SCALAR_DECL_RE % re.escape(var), body, re.M)
+        if m and not re.search(r"\b" + re.escape(var) + r"\b", body[m.end():]):
+            body = body[: m.start()] + body[m.end() + 1:]
+    return body
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--bin", dest="binary", choices=["slus", "civ2"], default="civ2")
@@ -109,6 +179,7 @@ def main() -> int:
 
     results = []
     rewritten = 0
+    fired_passes = {}
     for (name, path, raw) in pickle.load(open(src, "rb")):
         if not raw:
             results.append((name, path, raw))
@@ -119,13 +190,28 @@ def main() -> int:
             "asm", "us", args.binary, "nonmatchings", "game", f"{name}.s",
         )
         asm_text = open(asm_path).read() if os.path.exists(asm_path) else ""
-        variant = fix_stack_object_sizes(asm_text, code) or widen_signed_halfword_subtract(code, [0])
-        if variant is not None:
+        # Passes are chained: each one only rewrites a construct the others leave
+        # alone, and a variant that does not compile to the retail bytes is
+        # discarded by the sweep anyway.
+        passes = (
+            ("stack", lambda c: fix_stack_object_sizes(asm_text, c)),
+            ("halfword", lambda c: widen_signed_halfword_subtract(c, [0])),
+            ("rmw", fix_read_modify_write),
+        )
+        fired = []
+        for label, fn in passes:
+            variant = fn(code)
+            if variant is not None:
+                code = variant
+                fired.append(label)
+        if fired:
             rewritten += 1
-            code = variant
+            for label in fired:
+                fired_passes[label] = fired_passes.get(label, 0) + 1
         results.append((name, path, code))
     pickle.dump(results, open(dst, "wb"))
-    print(f"[{args.binary}] {rewritten} drafts rewritten -> {dst}")
+    detail = ", ".join(f"{k}={v}" for k, v in sorted(fired_passes.items()))
+    print(f"[{args.binary}] {rewritten} drafts rewritten ({detail}) -> {dst}")
     return 0
 
 

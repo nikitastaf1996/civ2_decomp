@@ -84,7 +84,7 @@ def main(argv=None):
     ap.add_argument("c_file")
     ap.add_argument("funcs", nargs="*")
     ap.add_argument("--bin", dest="binary", choices=["slus", "civ2"], default="civ2")
-    ap.add_argument("--opt", dest="opt_flags", default="-O1")
+    ap.add_argument("--opt", dest="opt_flags", default="-O1 -G8")
     ap.add_argument(
         "--source-only",
         action="store_true",
@@ -120,7 +120,11 @@ def main(argv=None):
         )
 
     w = os.path.join(tempfile.mkdtemp(prefix="try_match_"), "draft")
-    cc1 = f"{ROOT}/bin/gcc-2.7.2-psx/cc1 -quiet {opt_flags} -G8 -mips1 -mcpu=3000 -mgas -msoft-float -fgnu-linker -w"
+    # NB: -G8 used to be appended *after* opt_flags, which silently overrode the -G of
+    # every "--opt '-O1 -G0'" invocation; the sweep passes the flags through untouched,
+    # so a -G0 draft scored 1 diff there could never be reproduced here.  Keep the
+    # default in the flag list instead, and let --opt win.
+    cc1 = f"{ROOT}/bin/gcc-2.7.2-psx/cc1 -quiet {opt_flags} -mips1 -mcpu=3000 -mgas -msoft-float -fgnu-linker -w"
     r1 = subprocess.run(
         f"mipsel-linux-gnu-cpp -P -undef -nostdinc -I{ROOT}/include -I{ROOT}/external/psyq_headers/psyq_lib47/include "
         f"-D_LANGUAGE_C -DLANGUAGE_C -D__GNUC__=2 -Dmips -D__mips__ -D__mips -Dpsx -D__psx__ -D__psx -D_PSYQ -D_MIPSEL -DVERSION_US -DSKIP_ASM {src} > {w}.i && "

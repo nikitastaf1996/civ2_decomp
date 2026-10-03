@@ -4097,7 +4097,23 @@ s32 func_80098684(s32 arg0, s32 arg1, s32 arg2) {
     return res;
 }
 
-INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800986D0);
+/* Both arms clear or set one bit of the object's flag byte; committing the update
+   in place (`|=` / `&=`) is what makes cc1 share the load and the store (see
+   func_800A2910 for the register-order half of the same idiom). */
+void func_800986D0(s32 arg0, s32 arg1, s32 arg2, s32 arg3) {
+    /* func_800982F4 is defined above as a K&R (arg0, arg1) function. */
+    void *func_800982F4__800986D0() __asm__("func_800982F4");
+    void *temp_a0;
+
+    if (arg2 >= 0) {
+        temp_a0 = func_800982F4__800986D0();
+        if (arg3 != 0) {
+            M2C_FIELD(temp_a0, u8 *, 4) |= (1 << arg2);
+        } else {
+            M2C_FIELD(temp_a0, u8 *, 4) &= ~(1 << arg2);
+        }
+    }
+}
 
 
 s32 func_80098744() {
@@ -5039,9 +5055,55 @@ void func_800A28F0() {
     func_80094CBC();
 }
 
-INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800A2910);
+/* The two branches do the same read-modify-write on the object's flag word: m2c
+   materialises the result in a temporary and stores it once after the if/else,
+   but cc1 only shares the load and the store when the field is updated in place
+   (`|=` / `&=`).  With `var = field | 2;` the constant ends up in $v0 and the
+   loaded value in $v1, which reverses the `and`/`or` operands. */
+void func_800A2910(void *arg0, s32 arg1, s32 arg2) {
+    /* func_800A2364 is defined above as (s8 *, s32); the retail call site passes
+       nothing at all, so this declares an unprototyped alias of the same symbol
+       rather than redeclaring it with a different signature. */
+    void *func_800A2364__800A2910() __asm__("func_800A2364");
+    void *temp_v0;
 
-INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800A29BC);
+    temp_v0 = func_800A2364__800A2910();
+    if (temp_v0 != NULL) {
+        if (arg2 != 0) {
+            if (!(M2C_FIELD(temp_v0, s32 *, 8) & 2)) {
+                M2C_FIELD(arg0, s32 *, 0x14) = (s32) (M2C_FIELD(arg0, s32 *, 0x14) & 0xFFFF7FFF);
+            }
+            M2C_FIELD(temp_v0, s32 *, 8) |= 2;
+        } else {
+            if (M2C_FIELD(temp_v0, s32 *, 8) & 2) {
+                M2C_FIELD(arg0, s32 *, 0x14) = (s32) (M2C_FIELD(arg0, s32 *, 0x14) & 0xFFFF7FFF);
+            }
+            M2C_FIELD(temp_v0, s32 *, 8) &= ~2;
+        }
+    }
+}
+
+
+/* Same read-modify-write shape as func_800A2910. */
+void func_800A29BC(void *arg0, s32 arg1, s32 arg2) {
+    void *temp_v0;
+
+    temp_v0 = func_800A2444();
+    if (temp_v0 != NULL) {
+        if (arg2 != 0) {
+            if (!(M2C_FIELD(temp_v0, s32 *, 8) & 2)) {
+                M2C_FIELD(arg0, s32 *, 0x14) = (s32) (M2C_FIELD(arg0, s32 *, 0x14) & 0xFFFF7FFF);
+            }
+            M2C_FIELD(temp_v0, s32 *, 8) |= 2;
+        } else {
+            if (M2C_FIELD(temp_v0, s32 *, 8) & 2) {
+                M2C_FIELD(arg0, s32 *, 0x14) = (s32) (M2C_FIELD(arg0, s32 *, 0x14) & 0xFFFF7FFF);
+            }
+            M2C_FIELD(temp_v0, s32 *, 8) &= ~2;
+        }
+    }
+}
+
 
 INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800A2A68);
 
@@ -7659,7 +7721,20 @@ void func_800D7D4C() {
     func_800D62CC(&D_80121BF8);
 }
 
-INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800D7D74);
+/* The callee wants the byte address 0xE88 *below* D_80122AAC, and the materialised
+   base in $s0 is reused for both stores.  `- 0x3A2` keeps the arithmetic in
+   M2C_UNK-sized units so cc1 emits the single `addiu $a0, $s0, -0xE88`; writing
+   `- 0xE88` on an `M2C_UNK *` would be scaled by four. */
+/* @CFLAGS: -O1 -G0 */
+s32 func_800D7D74(void) {
+    M2C_UNK func_800FABBC(void *);
+    extern M2C_UNK D_80122AAC;
+
+    M2C_FIELD(&D_80122AAC, s32 *, 0) = 1;
+    func_800FABBC(&D_80122AAC - 0x3A2);
+    M2C_FIELD(&D_80122AAC, s32 *, -8) = -1;
+    return 0;
+}
 
 INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800D7DB8);
 
