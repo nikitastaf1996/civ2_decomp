@@ -7,10 +7,10 @@ Both retail PS-X executables on the disc are split, rebuilt from C + assembly, a
 | Executable | Role | Retail Size | SHA-1 | Game Functions | PsyQ 4.2 SDK Symbols | Matched C Functions | Total Accounted |
 | :--- | :--- | :---: | :--- | :---: | :---: | :---: | :---: |
 | **`SLUS_007.92`** | Title / Setup / Intro Movie Player | 290,816 B (`0x47000`) | `362a030a231fc5952010909faf848a8a461bbb3c` | 208 | 375 | **90 / 208 (43.3%)** | **465 / 583 (79.8%)** |
-| **`CIV2.EXE`** | Main Strategy Game Engine | 1,351,680 B (`0x14A000`) | `919bad81720f9b0e129fd5f10fb155cd7aa3c98c` | 1,427 | 390 | **641 / 1,427 (44.9%)** | **1,031 / 1,817 (56.7%)** |
-| **Combined** | **Full Game** | **1,642,496 B** | **100% Byte-Identical** | **1,635** | **765** | **731 / 1,635 (44.7%)** | **1,496 / 2,400 (62.3%)** |
+| **`CIV2.EXE`** | Main Strategy Game Engine | 1,351,680 B (`0x14A000`) | `919bad81720f9b0e129fd5f10fb155cd7aa3c98c` | 1,427 | 390 | **645 / 1,427 (45.2%)** | **1,035 / 1,817 (57.0%)** |
+| **Combined** | **Full Game** | **1,642,496 B** | **100% Byte-Identical** | **1,635** | **765** | **735 / 1,635 (45.0%)** | **1,500 / 2,400 (62.5%)** |
 
-*(Note: 729 of the 731 matched C functions are spliced directly into `src/slus/game.c` and `src/civ2/game.c`; 2 jump-table functions in `CIV2.EXE` — `func_800916F0` and `func_80094298` — also match 100% and await `.rodata` jump-table migration. Counts are `1,427 - $(grep -c INCLUDE_ASM src/civ2/game.c)` and `208 - $(grep -c INCLUDE_ASM src/slus/game.c)`.)*
+*(Note: 733 of the 735 matched C functions are spliced directly into `src/slus/game.c` and `src/civ2/game.c`; 2 jump-table functions in `CIV2.EXE` — `func_800916F0` and `func_80094298` — also match 100% and await `.rodata` jump-table migration. Counts are `1,427 - $(grep -c INCLUDE_ASM src/civ2/game.c)` and `208 - $(grep -c INCLUDE_ASM src/slus/game.c)`.)*
 
 ---
 
@@ -57,27 +57,36 @@ To maximize automated byte-for-byte matching before manual decompilation, severa
 
 ### 3b. Remaining Near-Misses (resume here)
 
-`tools/auto_match_sweep.py --near N` now also records the functions that are
-*close* but not exact, which turns the sweep into a triage tool. At `--near 10`
-the current 786 unmatched `CIV2.EXE` functions contain 45 within ten differing
+`tools/auto_match_sweep.py --near N` also records the functions that are *close*
+but not exact, which turns the sweep into a triage tool. At `--near 10` the
+current 782 unmatched `CIV2.EXE` functions contain 33 within ten differing
 instructions of the retail code; the list is written to
 `/tmp/near_misses_civ2.txt` sorted by diff count and is the cheapest place for a
-manual pass to start. The smallest remaining entries are:
+manual pass to start. Regenerate it after every merge -- the list is a snapshot,
+and entries that have since been matched (or whose recorded diff count came from
+a stale draft) otherwise masquerade as free wins. The three smallest remaining
+entries are:
 
 | Function | Diff | What is left |
 | :--- | ---: | :--- |
-| `func_800D7D74` | 1 | Base must live in a saved register (`s0 = &D_80122AAC`) and be reused for `sw 0(s0)` / `sw -8(s0)` / `addiu a0,s0,-0xE88` |
-| `func_800A2910`, `func_800A29BC` | 3 | `x & ~2` must load into `$v0` and build `-3` in `$v1`; cc1 picks the mirror image for every spelling tried |
-| `func_800B4B7C` | 4 | `%gp_rel` load hoisting order around the first `jal` |
+| `func_80077BF8` | 1 | The tail call re-materialises `$a0 = &sp10` in the `jal` delay slot where the retail build reuses the copy made for the `bne` delay slot |
+| `func_800B4B7C` | 4 | Prologue spill order (`$ra`, `$s1`, `$s0`) and the `$gp` load hoisting around the first `jal` |
 | `func_800B8E8C` | 4 | Two global index scales (`0x250`, `0x94`) that the two terms must pick up in evaluation order |
 | `func_800142CC` | 5 | `s1 = arg0` must be scheduled before the `$ra` spill, and the first character must live in `$a0` |
 | `func_80088B78` | 5 | `&D_8010CC6B` must be materialised before the argument load |
 | `func_800A2BB8`, `func_800C6E20`, `func_800C855C`, `func_800C8720` | 5 | cc1 hands the two callee-saved temporaries out in the opposite order |
-| `func_800E01AC` | 5 | `%gp_rel(D_80159298)` load must precede the `addu` chain |
+| `func_800A7D94`, `func_800E01AC` | 5 | `%gp_rel` load ordering |
 | `func_80098CB8` | 6 | `&D_8011A27C` must be materialised; a single-member struct does not trigger it |
 | `func_8007B980`, `func_800A23EC` | 6 | Loop counter and result temporaries swap `$s0`/`$s1` |
 | `func_800A1428` | 6 | Branch polarity plus a stored-address computation |
 | `func_8007BF24`, `func_80095A10`, `func_8009B114` | 8 | — |
+
+Two of the near-misses in the previous revision of this table (`func_800D7D74`
+at 1, `func_800A2910` / `func_800A29BC` at 3) were resolved by the idiom below
+rather than by the register-order change they looked like; five of the six
+1-diff entries the sweep had recorded were already matched, and one
+(`func_800CEF38`) was reproducible only after fixing `tools/try_match.py`
+(see section 6). Treat the recorded diff count as a hint, not as a measurement.
 
 Idioms that have resolved other near-misses (re-apply before rewriting logic):
 0. **Materialised symbol base.** cc1 folds every constant symbol access into
@@ -116,6 +125,14 @@ Idioms that have resolved other near-misses (re-apply before rewriting logic):
 0g. **Reusing one index temporary for two index computations** instead of
    letting m2c declare `temp_v1` and `temp_v1_2` keeps cc1 from splitting the
    value across two registers (`func_800270FC`).
+0h. **Update the field in place.** m2c renders a retail read-modify-write as a
+   temporary assigned in each branch plus one store afterwards
+   (`var_v0 = FIELD | 2; ... FIELD = var_v0;`). cc1 only shares the load and the
+   store when the compound form is written: `FIELD |= 2;` / `FIELD &= ~2;`.
+   The lifted spelling also reverses the operands of the generated `and`/`or`
+   (`and $v0,$v1,$v0` with the constant built in `$v0`, instead of the retail
+   `and $v0,$v0,$v1`). `tools/m2c_variants.py` folds this automatically, which is
+   how `func_800986D0` was found (`func_800A2910`, `func_800A29BC`).
 ### 4. Call-Graph Impact Analysis & Manual Decompilation of Core Engine Hubs
 Using `tools/callgraph_impact.py`, all unmatched functions in `SLUS_007.92` and `CIV2.EXE` were ranked by caller fan-in, total call sites, and global data array access frequency. The **38 highest-impact hub functions** (9 in `SLUS_007.92` and 29 in `CIV2.EXE`, accounting for **2,369 call sites** across both executables) were manually decompiled, verified to 100% byte-for-byte identity with `tools/try_match.py`, and spliced into `src/slus/game.c` and `src/civ2/game.c`:
 
@@ -216,8 +233,18 @@ python3 tools/auto_match_sweep.py --bin civ2 --only-file /tmp/unmatched_civ2.txt
 Both sweeps are additive and safe: a rewritten draft is only ever *one more
 candidate*. If it does not compile to the retail bytes it is discarded, so a
 wrong rewrite cannot regress the build. The variant pass currently contributes
-4 `CIV2.EXE` matches (`func_80043F10`, `func_800466E4`, `func_800B8DC0`,
-`func_800C6EB4`) that the literal m2c output misses.
+7 `CIV2.EXE` matches that the literal m2c output misses: `func_80043F10`,
+`func_800466E4`, `func_800B8DC0`, `func_800C6EB4` (stack-object and halfword
+passes) and `func_800986D0` plus the `func_800A2910` / `func_800A29BC` pair
+(read-modify-write pass).
+
+Single-function checks go through `tools/try_match.py <draft.c> <func> --bin
+civ2 --opt "-O1 -G8"`, which must reproduce the sweep's diff count for the same
+draft. It used to append a hard-coded `-G8` *after* `--opt`, so every
+`--opt "-O1 -G0"` run was in fact compiled `-G8`: a draft the sweep scored at one
+diff looked twenty-seven diffs away locally, and the top of the near-miss list
+was not reproducible at all. The default now lives in the flag list and `--opt`
+wins.
 
 `tools/m2c_postprocess.py` holds the shared m2c output normalisation (exact `%lo` access-type
 inference, byte-stride global pointer arithmetic, missing leading argument padding) used by the
