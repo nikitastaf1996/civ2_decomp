@@ -2694,7 +2694,35 @@ INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_8008E990);
 
 INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_8008EA50);
 
-INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_8008F3DC);
+/* @CFLAGS: -O1 -G0 */
+
+/* The retail frame reserves 4 bytes that the function never references;
+   an unused local of that size reproduces the frame and the $ra offset. */
+void func_8008F3DC(s32 arg0, s32 arg1) {
+    M2C_UNK func_8008EA50(s32, M2C_UNK);                /* extern */
+    s32 func_80098494__func_8008F3DC(s16, s16) __asm__("func_80098494");
+    extern M2C_UNK D_80113ED0;
+    extern M2C_UNK D_80113ED2;
+    extern s8 D_80113ED8[];
+    extern s16 D_8011A282;
+    u8 dead_pad[4];
+    s32 temp_a1;
+    s32 var_s0;
+    s32 var_v0;
+
+    var_s0 = 0;
+    if (D_8011A282 > 0) {
+
+        do {
+            temp_a1 = ((((var_s0 * 2) + var_s0) * 4) - var_s0) * 8;
+            if ((D_80113ED8[temp_a1] == (arg0 & 0xFF)) && ((arg1 < 0) || (func_80098494__func_8008F3DC(*(s16 *)(((s8 *)&D_80113ED0) + temp_a1), *(s16 *)(((s8 *)&D_80113ED2) + temp_a1)) == arg1))) {
+                func_8008EA50(var_s0, 0x63);
+            }
+            var_s0 += 1;
+
+        } while (var_s0 < D_8011A282);
+    }
+}
 
 INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_8008F4A8);
 
@@ -3111,11 +3139,39 @@ void func_800929B8(void *arg0, void *arg1, s32 arg2) {
 
 INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_80092A2C);
 
-INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_80092A94);
+/* @CFLAGS: -O1 -G0 */
+
+/* The retail frame reserves 4 bytes that the function never references;
+   an unused local of that size reproduces the frame and the $ra offset. */
+void func_80092A94(arg0)
+    void *arg0;
+{
+    M2C_UNK func_800F6664(s32, M2C_UNK);                /* extern */
+    u8 dead_pad[4];
+    s32 temp_a0;
+    s32 var_s0;
+    s32 var_v0;
+    void *temp_s1;
+
+    var_s0 = 0;
+    if (M2C_FIELD(arg0, s32 *, 0x168) > 0) {
+
+        do {
+            temp_s1 = arg0 + (((var_s0 * 8) - var_s0) * 4);
+            temp_a0 = M2C_FIELD(temp_s1, s32 *, 0x184);
+            if (temp_a0 != 0) {
+                func_800F6664(temp_a0, 3);
+                M2C_FIELD(temp_s1, s32 *, 0x184) = 0;
+            }
+            var_s0 += 1;
+
+        } while (var_s0 < M2C_FIELD(arg0, s32 *, 0x168));
+    }
+}
 
 
 void func_80092B1C(s32 arg0) {
-    M2C_UNK func_80092A94(); /* extern */
+    void func_80092A94();
     M2C_UNK func_800F82A4(); /* extern */
     M2C_UNK func_800FA9F0(); /* extern */
     func_80092A94();
@@ -7171,7 +7227,35 @@ INCLUDE_RODATA("asm/us/civ2/nonmatchings/game", D_80012658);
 
 INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800BA43C);
 
-INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800BA7E8);
+/* @CFLAGS: -O2 -G0 */
+
+/* The retail frame reserves 4 bytes that the function never references;
+   an unused local of that size reproduces the frame and the $ra offset. */
+void func_800BA7E8(s32 arg0) {
+    M2C_UNK func_800B95BC(M2C_UNK *, M2C_UNK, M2C_UNK, M2C_UNK, s32, s32, s32, s32); /* extern */
+    M2C_UNK func_800F7E08(M2C_UNK *, M2C_UNK *);        /* extern */
+    M2C_UNK func_80104878();                            /* extern */
+    M2C_UNK func_80107CCC(s32);                         /* extern */
+    extern s32 D_8011E748;
+    extern M2C_UNK D_80120D84;
+    extern s32 D_80120DA0;
+    extern M2C_UNK * D_80120DE8;
+    extern s32 D_801210C4;
+    M2C_UNK func_800B9A64(); /* extern */
+    M2C_UNK func_800BA43C(); /* extern */
+    u8 dead_pad[4];
+    func_800B95BC(&D_80120D84, 6, 6, 0, 0x12C, 0xC8, 0, 0);
+    D_801210C4 = arg0;
+    func_80107CCC(D_8011E748);
+    D_8011E748 = 0;
+    func_800F7E08(&D_80120D84, (void *)&func_800B9A64);
+    D_80120DE8 = (void *)&func_800BA43C;
+loop_1:
+    if (D_80120DA0 != 0) {
+        func_80104878();
+        goto loop_1;
+    }
+}
 
 INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800BA8AC);
 
@@ -7403,7 +7487,23 @@ void func_800C6B34(s32 arg0) {
     func_800E1E64(arg0, &D_801590B4);
 }
 
-INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800C6B5C);
+/* @CFLAGS: -O1 -G0 */
+
+/* The retail frame reserves 4 bytes that the function never references;
+   an unused local of that size reproduces the frame and the $ra offset. */
+void func_800C6B5C(s32 arg0, s32 arg1) {
+    void func_800C6B34(s32 arg0);
+    u8 dead_pad[4];
+    s32 var_s0;
+
+    var_s0 = 0;
+    if (arg1 > 0) {
+        do {
+            func_800C6B34(arg0);
+            var_s0 += 1;
+        } while (var_s0 < arg1);
+    }
+}
 
 
 void func_800C6BB4(s32 arg0) {
