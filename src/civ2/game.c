@@ -57,7 +57,28 @@ void func_800142C4() {
 
 }
 
-INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800142CC);
+/* @O2 */
+
+void func_800142CC(u8 *arg0) {
+    void func_800142C4__func_800142CC(s32) __asm__("func_800142C4");
+    u8 *var_s1;
+    u8 temp_a0;
+    s32 var_s0;
+
+    var_s1 = arg0;
+    temp_a0 = *var_s1;
+    if (temp_a0 != 0) {
+        do {
+            var_s0 = temp_a0;
+            if (var_s0 == 0xA) {
+                func_800142C4__func_800142CC(0xD);
+            }
+            func_800142C4__func_800142CC(var_s0);
+            var_s1 += 1;
+            temp_a0 = *var_s1;
+        } while (temp_a0 != 0);
+    }
+}
 
 INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_80014340);
 
