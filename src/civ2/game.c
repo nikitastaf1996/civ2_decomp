@@ -7650,7 +7650,19 @@ void func_800C6E00() {
     func_800E1E64();
 }
 
-INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800C6E20);
+/* @CFLAGS: -O1 -G8 -fno-schedule-insns */
+
+/* arg0 is passed to the first call on purpose: that extra use is what makes cc1
+   put it in s0 (matching retail) instead of s1. */
+void func_800C6E20(s32 arg0, M2C_UNK arg1) {
+    void func_800C6CA4(s32 arg0);
+    s32 func_800CEA98(s32 arg0);
+    void func_800C6CCC(s32 arg0);
+    M2C_UNK func_800E1E64(s32, s32);                  /* extern */
+    func_800C6CA4(arg0);
+    func_800E1E64(arg0, func_800CEA98(arg1));
+    func_800C6CCC(arg0);
+}
 
 void func_800C6E70(s32 arg0, s16 arg1) {
     M2C_UNK func_800E1E64();
