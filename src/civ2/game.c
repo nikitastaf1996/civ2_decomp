@@ -604,7 +604,21 @@ void func_8002FF00() {
 
 INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_8002FF28);
 
-INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_80030080);
+/* @O2 */
+
+void func_80030080(s32 arg0) {
+    extern M2C_UNK D_80117690;
+    extern s32 D_80158868;
+    extern void * D_8015886C;
+    if (arg0 < 0) {
+        return;
+    }
+    if (arg0 > 8) {
+        return;
+    }
+    D_80158868 = arg0;
+    D_8015886C = (arg0 * 0x578) + (void *)&D_80117690;
+}
 
 /* @O2 */
 
