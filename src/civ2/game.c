@@ -3673,7 +3673,7 @@ void func_800952DC(s32 arg0) {
     s32 __builtin_new(); /* extern */
     void * func_8009537C();
     void func_80095444();
-    s32 func_80095498(); /* extern */
+    s32 func_80095498();
     M2C_UNK func_80095588(); /* extern */
     M2C_UNK func_800FA660(); /* extern */
     M2C_UNK func_800FA6A0(); /* extern */
@@ -3754,7 +3754,49 @@ void func_80095444(s32 arg0, M2C_UNK arg1) {
     func_800FA7D4(arg0, arg1);
 }
 
-INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_80095498);
+/* @CFLAGS: -O1 -G0 */
+
+s32 func_80095498(void *arg0, s32 arg1) {
+    void func_800A74A4();
+    void func_800A7D94__func_80095498() __asm__("func_800A7D94");
+    void func_800C6B2C(s8 *arg0);
+    M2C_UNK func_800E1E64(M2C_UNK *, M2C_UNK *);        /* extern */
+    M2C_UNK func_800F5EE0(void *, M2C_UNK *, M2C_UNK, M2C_UNK, s32); /* extern */
+    M2C_UNK func_800F5FE8(void *, M2C_UNK *);           /* extern */
+    M2C_UNK func_800F8F4C(void *, M2C_UNK);             /* extern */
+    M2C_UNK func_800FAED0(void *);                      /* extern */
+    M2C_UNK func_80106C88(M2C_UNK *);                   /* extern */
+    extern M2C_UNK D_80158960;
+    M2C_UNK func_80095838(); /* extern */
+    /* The retail frame keeps a 128-byte scratch region below the string buffer
+       (sp98 at 0x98, sp118 at 0x118) and 8 bytes of padding above the spills. */
+    u8 padA[128];
+    u8 sp98[128];
+    u8 sp118[4];
+    u8 padC[8];
+    void *temp_s0;
+
+    func_800A74A4();
+    func_80106C88(&sp118);
+    func_800C6B2C((M2C_UNK *)sp98);
+    func_800E1E64((M2C_UNK *)sp98, "LOSER.STR");
+    func_800A7D94__func_80095498();
+    M2C_FIELD(arg0, s32 *, 0x20C) = arg1;
+    if (arg1 <= 0) {
+        M2C_FIELD(arg0, s32 *, 0x20C) = (s32) (~arg1 + 1);
+    }
+    temp_s0 = arg0 + 0x84;
+    func_800F5EE0(temp_s0, &D_80158960, 0x800, 0, 0x3C);
+    func_800F5FE8(temp_s0, (M2C_UNK *)sp98);
+    func_800F8F4C(temp_s0, 0);
+    func_800FAED0(arg0 + 0xB0);
+    M2C_FIELD(arg0, M2C_UNK **, 0x148) = (void *)&func_80095838;
+    M2C_FIELD(arg0, s16 *, 0x63C) = 0x28;
+    M2C_FIELD(arg0, s16 *, 0x63E) = 0x64;
+    M2C_FIELD(arg0, s16 *, 0x640) = 0x258;
+    M2C_FIELD(arg0, s16 *, 0x642) = 0x1E0;
+    return 1;
+}
 
 INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_80095588);
 
@@ -7840,7 +7882,26 @@ INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800C8658);
 
 INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800C8720);
 
-INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800C87C0);
+/* @CFLAGS: -O1 -G0 */
+/* The loop shape matters: with the comparison hoisted out of the body (as a
+   do/while retelling) cc1 folds it to a constant and emits 'li/bnez', while a
+   for loop keeps the 'slti' in the loop and reorg puts it in the delay slot. */
+s32 func_800C87C0(s32 arg0) {
+    s32 i;
+    s32 v;
+
+    v = 0;
+    for (i = 0; i < arg0; i++) {
+        v += 1;
+        if (i >= 4) {
+            v += 1;
+        }
+        if (i >= 6) {
+            v += 1;
+        }
+    }
+    return v;
+}
 
 INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800C8810);
 
@@ -8012,7 +8073,18 @@ void func_800CE4D8() {
     func_800CDAD4(D_80159190, 1);
 }
 
-INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800CE4FC);
+
+/* The retail frame reserves 4 bytes the body never references; an unused
+   local of that size reproduces the frame and the $ra offset. */
+void func_800CE4FC() {
+    extern void * D_80159190;
+    u8 dead_pad[4];
+    if (M2C_FIELD(D_80159190, s16 *, 0x3F0) != 0) {
+        M2C_FIELD(D_80159190, s16 *, 0x3F0) = 0;
+        return;
+    }
+    M2C_FIELD(D_80159190, s16 *, 0x3F0) = 1;
+}
 
 INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800CE530);
 
