@@ -6560,11 +6560,65 @@ void func_800B24EC(void *arg0) {
 
 INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800B24F4);
 
-INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800B26A0);
+/* @CFLAGS: -O1 -G8 -fno-schedule-insns */
+
+s8 *func_800B26A0(arg0, arg1, arg2)
+    void *arg0;
+    s8 *arg1;
+    s32 arg2;
+{
+    s8 *func_80094BD4(void *, s32);                     /* extern */
+    s32 func_800B1ED8__func_800B26A0(void *) __asm__("func_800B1ED8");
+    M2C_UNK func_800E1E94(s8 *, s8 *);                  /* extern */
+    s32 func_800E1EB4(s8 *);                            /* extern */
+    s32 temp_a0;
+    s32 temp_s0;
+    s32 var_v1;
+        s8 *temp_v0;
+    s8 *var_s0;
+    s8 *var_s1;
+
+    var_s0 = NULL;
+    var_s1 = M2C_FIELD(arg0, s8 **, 0x170);
+    if (var_s1 != NULL) {
+        do {
+            var_s0 = var_s1;
+            var_s1 = M2C_FIELD(var_s1, s8 **, 0xC);
+        } while (var_s1 != NULL);
+    }
+    var_s1 = func_80094BD4(arg0 + 0x198, 0x14);
+    if (var_s0 != NULL) {
+        M2C_FIELD(var_s0, s8 **, 0xC) = var_s1;
+        M2C_FIELD(var_s1, s8 **, 0x10) = var_s0;
+    } else {
+        M2C_FIELD(arg0, s8 **, 0x170) = var_s1;
+        M2C_FIELD(arg0, s8 **, 0x168) = var_s1;
+        M2C_FIELD(var_s1, s8 **, 0x10) = NULL;
+    }
+    M2C_FIELD(arg0, s8 **, 0x174) = var_s1;
+    M2C_FIELD(var_s1, s32 *, 0xC) = 0;
+    M2C_FIELD(var_s1, u16 *, 0) = 0U;
+    temp_v0 = func_80094BD4(arg0 + 0x198, (func_800E1EB4(arg1) - 0x7FFF) & 0xFFFF);
+    M2C_FIELD(var_s1, s8 **, 8) = temp_v0;
+    func_800E1E94(temp_v0, arg1);
+    if (*arg1 == 0) {
+        M2C_FIELD(var_s1, u16 *, 0) = (u16) (M2C_FIELD(var_s1, u16 *, 0) | 1);
+    }
+    M2C_FIELD(var_s1, s32 *, 4) = arg2;
+    temp_s0 = func_800B1ED8__func_800B26A0(arg0);
+    var_v1 = (func_800E1EB4(M2C_FIELD(var_s1, s8 **, 8)) * 6) + temp_s0 + M2C_FIELD(arg0, s32 *, 0x90) + 5;
+    temp_a0 = M2C_FIELD(arg0, s32 *, 0xFC);
+    if (var_v1 < temp_a0) {
+        var_v1 = temp_a0;
+    }
+    M2C_FIELD(arg0, s32 *, 0xFC) = var_v1;
+    M2C_FIELD(arg0, s32 *, 0x1C) = (s32) (M2C_FIELD(arg0, s32 *, 0x1C) + 1);
+    return var_s1;
+}
 
 
 u16 *func_800B27F8(void *arg0, s32 arg1, s32 arg2, s32 arg3) {
-    u16 *func_800B26A0();                               /* extern */
+    s8 * func_800B26A0();
     u16 *temp_v1;
 
     M2C_FIELD(arg0, s32 *, 0x30) = (s32) (M2C_FIELD(arg0, s32 *, 0x30) | 5);

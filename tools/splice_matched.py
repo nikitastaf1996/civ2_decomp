@@ -33,6 +33,29 @@ PROMOTE_TO_S32 = {
 }
 
 
+def call_arity_mismatch(game_c: str, fn: str, params: str) -> bool:
+    """True if some existing call site of `fn` disagrees with the definition's arity.
+
+    A callee that reads more registers than a caller supplies is legal for the MIPS
+    O32 ABI, but only a K&R-style definition lets C89 express both call shapes in one
+    translation unit.  Declarations (`TYPE *fn(...);`) are not call sites and are
+    skipped; the definition itself is not in `game_c` yet, because a function only
+    gets here while it is still an INCLUDE_ASM stub.
+    """
+    declared = len([p for p in params.split(",") if p.strip()]) if params.strip() and params.strip() != "void" else 0
+    for m in re.finditer(rf"\b{re.escape(fn)}\s*\(([^)]*)\)", game_c):
+        line_start = game_c.rfind("\n", 0, m.start()) + 1
+        prefix = game_c[line_start:m.start()]
+        # `s8 *func_800B26A0(...)` / `M2C_UNK func_X(...);` are declarations.
+        if re.match(r"\s*(?:[A-Za-z_][\w]*\s*\**\s*)+$", prefix) or ";" in prefix:
+            continue
+        args = m.group(1)
+        actual = len([a for a in args.split(",") if a.strip()]) if args.strip() else 0
+        if actual != declared:
+            return True
+    return False
+
+
 def trailing_pad_words(binary: str, fn: str) -> int:
     """Number of 4-byte alignment words splat emits after this function's endlabel.
 
@@ -167,7 +190,12 @@ def splice_binary(binary: str):
         c = re.sub(r"^extern\s+M2C_UNK\s+(func_[0-9A-F]{8});", r"M2C_UNK \1(); /* extern */", c, flags=re.M)
         c = re.sub(r"&(func_[0-9A-F]{8})\b", r"(void *)&\1", c)
         c = re.sub(rf"^([A-Za-z0-9_* \t]+?\b{fn})\(void\)\s*\{{", r"\1() {", c, flags=re.M)
-        if fn in KR_FUNCS:
+        # A call site that supplies a different number of arguments than the definition
+        # reads cannot coexist with a prototype under C89; a K&R-style definition accepts
+        # both call shapes.  Decide once, from the definition's own parameter list.
+        sig = re.search(rf"^[A-Za-z0-9_* \t]+?\b{fn}\(([^)]*)\)\s*\{{\s*$", c, flags=re.M)
+        use_kr = fn in KR_FUNCS or (sig is not None and call_arity_mismatch(game_c, fn, sig.group(1)))
+        if use_kr:
             m = re.search(rf"^([A-Za-z0-9_* \t]+?\b{fn})\(([^)]+)\)\s*\{{", c, flags=re.M)
             if m and m.group(2).strip() != "void":
                 plist = [p.strip() for p in m.group(2).split(",")]
