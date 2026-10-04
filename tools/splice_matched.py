@@ -82,6 +82,7 @@ def splice_binary(binary: str):
     #   1. /home/user/bank.json - persistent, workspace-backed store (survives /tmp being wiped)
     #   2. /tmp/matched_<binary>.pkl - the sweep tools' scratch output
     matched = {}
+    rodata_after = {}
     bank_path = "/home/user/bank.json"
     if os.path.exists(bank_path):
         import json
@@ -89,6 +90,8 @@ def splice_binary(binary: str):
         for fn, rec in json.load(open(bank_path)).items():
             if rec.get("bin", binary) == binary:
                 matched[fn] = (rec["opt"], rec["code"])
+                if rec.get("rodata_after"):
+                    rodata_after[fn] = rec["rodata_after"]
     pkl_path = f"/tmp/matched_{binary}.pkl"
     if os.path.exists(pkl_path):
         for fn, rec in pickle.load(open(pkl_path, "rb")).items():
@@ -305,6 +308,28 @@ def splice_binary(binary: str):
         elif re.search(pat_stub, game_c):
             game_c = re.sub(pat_stub, lambda _: c_code, game_c, count=1)
             spliced_count += 1
+        # Some matched functions own .rodata that lived in their nonmatching .s
+        # (string literals, tables).  The C body drops those bytes, so re-emit them
+        # as INCLUDE_RODATA fragments placed right after the function - this both
+        # restores the bytes and keeps the original .rodata link order.
+        for sym in rodata_after.get(fn, []):
+            tag = f'\n\nINCLUDE_RODATA("asm/us/{binary}/nonmatchings/game", {sym});'
+            start = game_c.find(c_code)
+            if start == -1:
+                continue
+            # walk to the function's closing brace (depth 0 after the opening one)
+            depth = 0
+            i = game_c.index("{", start)
+            while i < len(game_c):
+                if game_c[i] == "{":
+                    depth += 1
+                elif game_c[i] == "}":
+                    depth -= 1
+                    if depth == 0:
+                        break
+                i += 1
+            insert_at = i + 1
+            game_c = game_c[:insert_at] + tag + game_c[insert_at:]
 
     with open(game_c_path, "w") as f:
         f.write(game_c)
