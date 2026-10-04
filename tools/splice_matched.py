@@ -172,11 +172,17 @@ def splice_binary(binary: str):
                         return f"{indent}{ret} {callee}({dparams});"
                     n_def = len([p for p in dparams.split(",") if p.strip()]) if dparams else 0
                     n_call = len([p for p in cargs.split(",") if p.strip()]) if cargs else 0
-                    if n_call > n_def:
-                        # This call passes more arguments than the callee's own definition
-                        # declares (legal at the ABI level; the callee ignores them), and
-                        # GNU C rejects two such declarations for the same external name.
-                        # Bind an alias to the same symbol instead, and rename the calls.
+                    if n_call != n_def:
+                        # This call site disagrees with the callee's own definition about
+                        # how many arguments are passed.  That is legal at the MIPS O32
+                        # level -- the callee simply reads $a0-$a3, and a caller that
+                        # supplies fewer arguments leaves the rest of the registers
+                        # untouched -- but GNU C rejects two such declarations for the same
+                        # external name ("too few arguments" / "conflicting types").
+                        # Bind an alias to the same symbol instead, and rename the calls:
+                        # the emitted assembly is unchanged, because the alias *is* the
+                        # callee's symbol and an unprototyped declaration accepts any
+                        # number of arguments.
                         alias = f"{callee}__{fn}"
                         alias_map[callee] = alias
                         return f'{indent}{ret} {alias}({cargs}) __asm__("{callee}");'

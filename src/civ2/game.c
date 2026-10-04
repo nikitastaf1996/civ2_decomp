@@ -1936,7 +1936,31 @@ void func_8007B91C(s32 arg0) {
     *(s8 *)(((s8 *)&D_8010D6C3) + (arg0 * 0x1A)) = 3;
 }
 
-INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_8007B980);
+/* @CFLAGS: -O2 -G8 -fno-schedule-insns2 */
+
+s32 func_8007B980(s32 arg0, s32 arg1) {
+    s32 func_8007B6FC(s32 arg0);
+    s32 func_8007B798__func_8007B980() __asm__("func_8007B798");
+    s32 var_s0;
+    s32 var_s1;
+    s32 var_v0;
+
+    var_s0 = -1;
+    var_s1 = -1;
+    var_v0 = func_8007B798__func_8007B980();
+loop_1:
+    if (var_v0 >= 0) {
+        var_s0 += 1;
+        if (arg1 == var_s0) {
+            var_s1 = var_v0;
+        }
+        var_v0 = func_8007B6FC(var_v0);
+        if (var_s1 < 0) {
+            goto loop_1;
+        }
+    }
+    return var_s1;
+}
 
 INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_8007B9EC);
 
@@ -5411,7 +5435,25 @@ INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800A2A68);
 
 INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800A2B0C);
 
-INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800A2BB8);
+/* @CFLAGS: -O2 -G8 -fno-schedule-insns2 */
+
+void func_800A2BB8(s32 arg0, s32 arg1, M2C_UNK arg2) {
+    s32 func_800A2364__func_800A2BB8() __asm__("func_800A2364");
+    M2C_UNK func_800A2A68(s32, s32, M2C_UNK);           /* extern */
+    void *temp_v0;
+    void *var_s0;
+
+    temp_v0 = func_800A2364__func_800A2BB8();
+    if (temp_v0 != NULL) {
+        var_s0 = M2C_FIELD(temp_v0, void **, 0x18);
+        if (var_s0 != NULL) {
+            do {
+                func_800A2A68(arg0, M2C_FIELD(var_s0, s32 *, 4), arg2);
+                var_s0 = M2C_FIELD(var_s0, void **, 0x10);
+            } while (var_s0 != NULL);
+        }
+    }
+}
 
 
 void func_800A2C28(s32 arg0, s32 arg1, M2C_UNK arg2) {
@@ -6596,7 +6638,26 @@ void func_800B48C0() {
 
 INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800B48C8);
 
-INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800B4B7C);
+/* @CFLAGS: -O2 -G8 -fno-schedule-insns2 */
+
+void func_800B4B7C() {
+    M2C_UNK func_80104794(s32);                         /* extern */
+    extern s32 D_80158F40;
+    s32 temp_a0;
+    s32 temp_s1;
+    s32 var_s0;
+
+    var_s0 = 0;
+    do {
+        temp_s1 = var_s0 * 4;
+        temp_a0 = M2C_FIELD((temp_s1 + D_80158F40), s32 *, 0x1D4);
+        if (temp_a0 != 0) {
+            func_80104794(temp_a0);
+            M2C_FIELD((temp_s1 + D_80158F40), s32 *, 0x1D4) = 0;
+        }
+        var_s0 += 1;
+    } while (var_s0 < 0xA);
+}
 
 
 void func_800B4BEC(s32 arg0) {
