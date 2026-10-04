@@ -2579,7 +2579,21 @@ INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_80088788);
 
 INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_80088898);
 
-INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_80088B78);
+/* @CFLAGS: -O2 -G8 -fno-schedule-insns2 */
+
+void func_80088B78(s32 arg0, M2C_UNK arg1) {
+    void func_800CEF1C(s32 arg0, s32 *arg1, s32 *arg2);
+    extern M2C_UNK D_8010CC6B;
+    s32 sp10;
+    u8 sp14;
+    u8 *temp_s0;
+    u8 *p;
+
+    func_800CEF1C(arg1, &sp10, &sp14);
+    p = (u8 *)((arg0 * 0x10) + (void *)&D_8010CC6B);
+    temp_s0 = p + sp10;
+    *temp_s0 |= sp14;
+}
 
 INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_80088BD8);
 
@@ -9037,7 +9051,30 @@ s32 func_800E0118(s32 arg0, M2C_UNK arg1, s32 arg2, M2C_UNK arg3, s32 arg4) {
     return temp_s0;
 }
 
-INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800E01AC);
+
+s32 func_800E01AC(s32 arg0, M2C_UNK arg1, s32 arg2, M2C_UNK arg3, s32 arg4) {
+    M2C_UNK func_800E00A8(s32, M2C_UNK, s32, M2C_UNK);  /* extern */
+    s32 func_800E1EB4(M2C_UNK);                         /* extern */
+    extern s32 D_8015928C;
+    extern s32 D_80159290;
+    extern s32 D_80159298;
+    s32 temp_s0;
+    s32 var_v1;
+
+    var_v1 = func_800E1EB4(arg1) * 6;
+    if (D_8015928C >= 0) {
+        if (D_80159290 <= 0) {
+            var_v1 -= D_80159290;
+        } else {
+            var_v1 += D_80159290;
+        }
+    }
+    var_v1 += D_80159298;
+    temp_s0 = (arg2 + arg4) - var_v1;
+    func_800E00A8(arg0, arg1, temp_s0, arg3);
+    return temp_s0;
+}
+__asm__(".word 0x00000000");
 
 INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800E026C);
 

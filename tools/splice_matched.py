@@ -33,6 +33,27 @@ PROMOTE_TO_S32 = {
 }
 
 
+def trailing_pad_words(binary: str, fn: str) -> int:
+    """Number of 4-byte alignment words splat emits after this function's endlabel.
+
+    They live in the function's own nonmatching .s file as an `alabel` block, so a
+    C body that replaces the INCLUDE_ASM line silently drops them.  Returns 0 for
+    the overwhelmingly common case of no padding.
+    """
+    path = os.path.join(ROOT, "asm", "us", binary, "nonmatchings", "game", f"{fn}.s")
+    if not os.path.exists(path):
+        return 0
+    with open(path) as f:
+        text = f.read()
+    m = re.search(rf"^endlabel {re.escape(fn)}\s*$", text, re.M)
+    if not m:
+        return 0
+    rest = text[m.end():]
+    if not re.match(r"\s*alabel \w+", rest):
+        return 0
+    return sum(1 for line in rest.splitlines() if re.match(r"\s*/\*.*?\*/\s", line))
+
+
 def splice_binary(binary: str):
     # Sources of hand-matched functions, in priority order:
     #   1. /home/user/bank.json - persistent, workspace-backed store (survives /tmp being wiped)
@@ -223,6 +244,14 @@ def splice_binary(binary: str):
                     in_body = True
                     body_lines.extend(ext_lines)
         c_final = "\n".join(body_lines)
+        # A handful of functions are followed by an alignment pad that splat emits
+        # *inside* the same .s file (`alabel D_XXXXXXXX` after `endlabel`).  Splicing
+        # the C body removes those bytes, which shifts every later function by the
+        # pad size and breaks the link layout even though the function itself is
+        # byte-identical.  Re-emit the pad as file-scope .word directives.
+        pad_words = trailing_pad_words(binary, fn)
+        if pad_words:
+            c_final += "\n" + "\n".join('__asm__(".word 0x00000000");' for _ in range(pad_words))
         opt_flags = opt.strip()
         if opt_flags == "-O2 -G8":
             c_final = "/* @O2 */\n" + c_final
