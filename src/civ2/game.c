@@ -5753,7 +5753,64 @@ INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800A7880);
 
 INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800A79A0);
 
-INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800A7D94);
+/* @CFLAGS: -O1 -G0 */
+
+/* The retail frame is 0x30 with $ra at 0x28 and nothing else spilled: a 24-byte
+   local is allocated but never referenced, so it has to stay declared here. */
+void func_800A7D94() {
+    M2C_UNK SpuSetKey(M2C_UNK, M2C_UNK);                /* extern */
+    M2C_UNK SpuSetReverbModeParam(void *);              /* extern */
+    M2C_UNK SsSeqClose(s16);                            /* extern */
+    M2C_UNK SsSeqSetVol(s16, M2C_UNK, M2C_UNK);         /* extern */
+    M2C_UNK SsSeqStop(s16);                             /* extern */
+    M2C_UNK SsUtAllKeyOff(M2C_UNK);                     /* extern */
+    M2C_UNK SsUtReverbOff();                            /* extern */
+    M2C_UNK SsUtSetReverbDepth(M2C_UNK, M2C_UNK);       /* extern */
+    M2C_UNK SsUtSetReverbType(M2C_UNK);                 /* extern */
+    M2C_UNK SsVabClose(s16);                            /* extern */
+    M2C_UNK func_800F5718(s32);                         /* extern */
+    M2C_UNK func_800F5A24(s32);                         /* extern */
+    extern M2C_UNK D_8011F9D8;
+    extern s16 D_80158CD8;
+    extern s16 D_80158CDA;
+    extern s32 D_80158CDC;
+    extern s32 D_80158CFC;
+    extern s16 D_80158D00;
+    extern s16 D_80158D02;
+    extern s32 D_80158D24;
+    extern s32 D_80158D28;
+    u8 sp_pad[24];
+    if (D_80158CFC != -1) {
+        if (D_80158CD8 != -1) {
+            SsVabClose(D_80158CD8);
+            D_80158CDA = -1;
+            D_80158CD8 = -1;
+        }
+        if (D_80158CDC != 0) {
+            func_800F5A24(D_80158CDC);
+            func_800F5718(D_80158CDC);
+            D_80158CDC = 0;
+        }
+        SsSeqSetVol(D_80158D02, 0, 0);
+        SsSeqStop(D_80158D02);
+        SsSeqClose(D_80158D02);
+        SsUtAllKeyOff(0);
+        SpuSetKey(0, 0xFFFFFF);
+        M2C_FIELD(&D_8011F9D8, s32 *, 0) = 0x100;
+        M2C_FIELD(&D_8011F9D8, s16 *, 4) = 0;
+        M2C_FIELD(&D_8011F9D8, s16 *, 6) = 0;
+        SpuSetReverbModeParam((void *)((u8 *)&D_8011F9D8 - 4));
+        SsVabClose(D_80158D00);
+        SsUtReverbOff();
+        SsUtSetReverbType(0);
+        SsUtSetReverbDepth(0, 0);
+        func_800F5718(D_80158D24);
+        func_800F5718(D_80158D28);
+        D_80158D28 = 0;
+        D_80158D24 = 0;
+        D_80158CFC = -1;
+    }
+}
 
 
 void func_800A7EB8() {
@@ -8765,7 +8822,7 @@ INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800DDD68);
 
 void func_800DDFEC(s32 arg0) {
     s32 __builtin_new(); /* extern */
-    M2C_UNK func_800A7D94(); /* extern */
+    void func_800A7D94();
     void * func_800DE090();
     void func_800DE160();
     M2C_UNK func_800DE284(); /* extern */

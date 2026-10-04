@@ -61,9 +61,14 @@ def main():
     # Per-function flag overrides.  `/* @O2 */` is the historical spelling and means
     # `-O2 -G8`; `/* @CFLAGS: <flags> */` supports any other cc1 flag set (e.g. `-O1 -G0`).
     flag_map = {}
-    for m in re.finditer(r"/\*\s*@O2\s*\*/\s*\n(?:[A-Za-z0-9_ *]+?\b)(func_[0-9A-F]{8})\b", c_text):
+    # Any comment/blank lines between the annotation and the definition are skipped:
+    # a spliced body may carry its own explanatory comment right above the signature,
+    # and treating that as "not annotated" silently compiles the function with the
+    # file's default flags instead of the ones it was verified with.
+    gap = r"(?:\s*(?:/\*(?:[^*]|\*(?!/))*\*/)?\s*\n)*"
+    for m in re.finditer(r"/\*\s*@O2\s*\*/\s*\n" + gap + r"(?:[A-Za-z0-9_ *]+?\b)(func_[0-9A-F]{8})\b", c_text):
         flag_map[m.group(1)] = "-O2 -G8"
-    for m in re.finditer(r"/\*\s*@CFLAGS:\s*([-0-9A-Za-z .]+?)\s*\*/\s*\n(?:[A-Za-z0-9_ *]+?\b)(func_[0-9A-F]{8})\b", c_text):
+    for m in re.finditer(r"/\*\s*@CFLAGS:\s*([-0-9A-Za-z .]+?)\s*\*/\s*\n" + gap + r"(?:[A-Za-z0-9_ *]+?\b)(func_[0-9A-F]{8})\b", c_text):
         flag_map[m.group(2)] = m.group(1).strip()
 
     s_lines = open(args.in_s).read().splitlines()
