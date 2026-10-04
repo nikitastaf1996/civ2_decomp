@@ -60,7 +60,7 @@ def main(argv=None):
         if not re.search(r"\b" + re.escape(name) + r"\s*\(", code):
             continue
         if args.enhanced:
-            code = enhance_c(args.binary, name, None, code)
+            code = enhance_c(args.binary, name, _asm, code)
         path = os.path.join(args.out_dir, f"{name}.c")
         with open(path, "w") as f:
             f.write(PROLOGUE + code + "\n")

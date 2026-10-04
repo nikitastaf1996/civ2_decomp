@@ -30,7 +30,7 @@ def score(path, func, binary, opt):
     m = re.search(r":\s*(\d+) diffs? ", out)
     if m:
         return int(m.group(1)), out
-    if "IDENTICAL" in out or "0 diff" in out:
+    if "MATCH" in out or "IDENTICAL" in out or "0 diff" in out:
         return 0, out
     return None, out
 
