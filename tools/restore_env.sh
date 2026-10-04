@@ -67,6 +67,14 @@ else:
     fi
     echo "==> extracting retail executables from $ROM"
     "$ROOT/tools/extract_disc.sh" "$ROM"
+
+    # setup_toolchain.sh could not generate the linker scripts on a fresh machine
+    # (splat needs these binaries, which only exist now), so generate them here.
+    echo "==> Linker scripts (splat)"
+    for y in slus civ2; do
+        ( cd "$ROOT" && python3 -m splat split "config/us/$y.yaml" >/dev/null )
+    done
+    echo "    generated build/us/generated/{slus,civ2}.ld"
 fi
 
 echo
