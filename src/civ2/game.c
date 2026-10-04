@@ -7938,13 +7938,57 @@ INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800C83D4);
 
 INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800C84F0);
 
-INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800C855C);
+
+s32 func_800C855C(s32 arg0, s32 arg1) {
+    s32 func_800C83D4(s32, M2C_UNK);                    /* extern */
+    s32 temp_s0;
+    s32 temp_s1;
+    s32 var_s0;
+    s32 var_v0;
+
+    if (arg1 == 0) {
+        return func_800C83D4(arg0, 0);
+    }
+    if (arg1 != 1) {
+        temp_s0 = func_800C83D4(arg0, 3);
+        temp_s1 = func_800C83D4(arg0, 4);
+        var_s0 = temp_s0;
+        var_v0 = func_800C83D4(arg0, 5);
+        var_s0 = var_s0 + temp_s1;
+    } else {
+        var_s0 = func_800C83D4(arg0, 1);
+        var_v0 = func_800C83D4(arg0, 2);
+    }
+    return var_s0 + var_v0;
+}
 
 INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800C85FC);
 
 INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800C8658);
 
-INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800C8720);
+
+s32 func_800C8720(s32 arg0, s32 arg1) {
+    s32 func_800C84F0(s32, M2C_UNK);                    /* extern */
+    s32 temp_s0;
+    s32 temp_s1;
+    s32 var_s0;
+    s32 var_v0;
+
+    if (arg1 == 0) {
+        return func_800C84F0(arg0, 0);
+    }
+    if (arg1 != 1) {
+        temp_s0 = func_800C84F0(arg0, 3);
+        temp_s1 = func_800C84F0(arg0, 4);
+        var_s0 = temp_s0;
+        var_v0 = func_800C84F0(arg0, 5);
+        var_s0 = var_s0 + temp_s1;
+    } else {
+        var_s0 = func_800C84F0(arg0, 1);
+        var_v0 = func_800C84F0(arg0, 2);
+    }
+    return var_s0 + var_v0;
+}
 
 /* @CFLAGS: -O1 -G0 */
 /* The loop shape matters: with the comparison hoisted out of the body (as a
