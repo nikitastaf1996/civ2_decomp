@@ -2656,9 +2656,45 @@ s32 func_80089B20(s32 arg0, s32 arg1) {
 
 INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_80089BA4);
 
-INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_80089C78);
 
-INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_80089CCC);
+/* Small table scan: a while loop with an early 'return 1' beats the flag-variable
+   retelling -- with a flag variable cc1 keeps it in v1 and pushes the base pointer
+   out to a0, while retail has the base in v1 and everything else in v0. */
+s32 func_80089C78(s32 arg0, s32 arg1) {
+    extern M2C_UNK D_80113F0F;
+    s32 var_a2;
+    s8 *temp_v1;
+
+    var_a2 = 0;
+    temp_v1 = (s8 *)((arg0 * 0x58) + (void *)&D_80113F0F);
+    while (var_a2 < 3) {
+        if (temp_v1[var_a2] == arg1) {
+            return 1;
+        }
+        var_a2 += 1;
+    }
+    return 0;
+}
+
+
+/* Small table scan: a while loop with an early 'return 1' beats the flag-variable
+   retelling -- with a flag variable cc1 keeps it in v1 and pushes the base pointer
+   out to a0, while retail has the base in v1 and everything else in v0. */
+s32 func_80089CCC(s32 arg0, s32 arg1) {
+    extern M2C_UNK D_80113F12;
+    s32 var_a2;
+    s8 *temp_v1;
+
+    var_a2 = 0;
+    temp_v1 = (s8 *)((arg0 * 0x58) + (void *)&D_80113F12);
+    while (var_a2 < 3) {
+        if (temp_v1[var_a2] == arg1) {
+            return 1;
+        }
+        var_a2 += 1;
+    }
+    return 0;
+}
 
 INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_80089D20);
 
@@ -4647,11 +4683,27 @@ void func_80098CB8(s32 arg0, M2C_UNK arg1) {
 
 INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_80098D4C);
 
-INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_80099004);
+/* @CFLAGS: -O2 -G8 -fno-schedule-insns2 */
+
+/* Same shape as the matched func_80088B78: the chained address arithmetic has to be
+   split into two statements, and the byte is read through a u8 pointer. */
+s32 func_80099004(s32 arg0, M2C_UNK arg1) {
+    void func_800CEF1C(s32 arg0, s32 *arg1, s32 *arg2);
+    extern M2C_UNK D_8010CC6B;
+    s32 sp10;
+    s32 sp14;
+    u8 *p;
+    u8 *q;
+
+    func_800CEF1C(arg1, &sp10, &sp14);
+    p = (u8 *)((arg0 * 0x10) + (void *)&D_8010CC6B);
+    q = p + sp10;
+    return (*q & sp14) != 0;
+}
 
 
 s32 func_80099064(s32 arg0) {
-    s32 func_80099004(s32, s32); /* extern */
+    s32 func_80099004();
     s32 var_s1;
     s32 var_s0;
     var_s1 = 0;
