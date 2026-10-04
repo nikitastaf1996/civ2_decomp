@@ -7,10 +7,10 @@ Both retail PS-X executables on the disc are split, rebuilt from C + assembly, a
 | Executable | Role | Retail Size | SHA-1 | Game Functions | PsyQ 4.2 SDK Symbols | Matched C Functions | Total Accounted |
 | :--- | :--- | :---: | :--- | :---: | :---: | :---: | :---: |
 | **`SLUS_007.92`** | Title / Setup / Intro Movie Player | 290,816 B (`0x47000`) | `362a030a231fc5952010909faf848a8a461bbb3c` | 208 | 375 | **92 / 208 (44.2%)** | **467 / 583 (80.1%)** |
-| **`CIV2.EXE`** | Main Strategy Game Engine | 1,351,680 B (`0x14A000`) | `919bad81720f9b0e129fd5f10fb155cd7aa3c98c` | 1,427 | 390 | **662 / 1,427 (46.4%)** | **1,052 / 1,817 (57.9%)** |
-| **Combined** | **Full Game** | **1,642,496 B** | **100% Byte-Identical** | **1,635** | **765** | **754 / 1,635 (46.1%)** | **1,519 / 2,400 (63.3%)** |
+| **`CIV2.EXE`** | Main Strategy Game Engine | 1,351,680 B (`0x14A000`) | `919bad81720f9b0e129fd5f10fb155cd7aa3c98c` | 1,427 | 390 | **666 / 1,427 (46.7%)** | **1,056 / 1,817 (58.1%)** |
+| **Combined** | **Full Game** | **1,642,496 B** | **100% Byte-Identical** | **1,635** | **765** | **758 / 1,635 (46.4%)** | **1,523 / 2,400 (63.5%)** |
 
-*(Note: 752 of the 754 matched C functions are spliced directly into `src/slus/game.c` and `src/civ2/game.c`; 2 jump-table functions in `CIV2.EXE` — `func_800916F0` and `func_80094298` — also match 100% and await `.rodata` jump-table migration. Counts are `1,427 - $(grep -c INCLUDE_ASM src/civ2/game.c)` and `208 - $(grep -c INCLUDE_ASM src/slus/game.c)`.)*
+*(Note: 756 of the 758 matched C functions are spliced directly into `src/slus/game.c` and `src/civ2/game.c`; 2 jump-table functions in `CIV2.EXE` — `func_800916F0` and `func_80094298` — also match 100% and await `.rodata` jump-table migration. Counts are `1,427 - $(grep -c INCLUDE_ASM src/civ2/game.c)` and `208 - $(grep -c INCLUDE_ASM src/slus/game.c)`.)*
 
 ---
 
@@ -70,16 +70,22 @@ function that is exact under the plain draft can be a near miss under a rewrite
 and vice versa -- merge the per-variant `--near-out` files, do not overwrite
 them). The smallest remaining entries are:
 
-| Function | Diff | What is left |
-| :--- | ---: | :--- |
-| `func_80077BF8` | 1 | The else-branch form puts `$a0 = &sp10` in the `bne` delay slot correctly, but the tail call still re-materialises it in the `jal` delay slot, where the retail build has a bare `nop` |
-| `func_800B4B7C` | 4 | Prologue spill order (`$ra`, `$s1`, `$s0`) and the `$gp` load hoisting around the first `jal` |
-| `func_800142CC` | 5 | `s1 = arg0` must be scheduled before the `$ra` spill, and the first character must live in `$a0` |
-| `func_80088B78` | 5 | `&D_8010CC6B` must be materialised before the argument load |
-| `func_800A2BB8`, `func_800B26A0`, `func_800C6E20`, `func_800C855C`, `func_800C8720` | 5 | cc1 hands the two callee-saved temporaries out in the opposite order |
-| `func_800A7D94`, `func_800E01AC` | 5 | Address materialisation order around a `%gp_rel` load |
-| `func_8007B980`, `func_800A1428`, `func_800A23EC`, `func_800A4828`, `func_800ADAC0` | 6 | — |
-| `func_800145C8`, `func_80089C78`, `func_80089CCC`, `func_800B07CC`, `func_800D8BE0` | 7 | — |
+| Function | Diff | Flag set | What is left |
+| :--- | ---: | :--- | :--- |
+| `func_80077BF8` | 1 | `-O1 -G0` | The else-path tail call re-materialises `$a0 = &sp10` in the `jal` delay slot where the retail build reuses the value the branch delay slot already left there (cc1 chose the fall-through thread for the delay-slot fill; retail moved the instruction out of the else block) |
+| `func_80030080` | 3 | `-O2 -G8 -fno-delayed-branch` | Retail tests `bltz` then `slti` (a `arg0 < 0 \|\| arg0 > 8` range test); m2c's draft folds it into one `sltiu` |
+| `func_800A7D94` | 5 | `-O1 -G0 -fno-schedule-insns2` | Address materialisation order around a `%gp_rel` load |
+| `func_80088B78` | 5 | `-O1 -G8 -fno-schedule-insns` | `&D_8010CC6B` must be materialised before the argument load |
+| `func_800B26A0` | 5 | `-O1 -G8 -fno-schedule-insns` | Retail loads straight into `$s1`; the draft materialises `$v0` first (one extra live temporary) |
+| `func_800C6E20`, `func_800C855C`, `func_800C8720`, `func_800E01AC`, `func_800142CC`, `func_800ADAC0` | 5 | `-O1/-O2` + `-fno-schedule-insns[2]` | cc1 hands the two callee-saved temporaries out in the opposite order |
+| `func_80020B10`, `func_800A1428`, `func_800A23EC`, `func_800A4828`, `func_800B245C` | 6 | see `--opts` in the sweep log | — |
+
+Every entry carries the *flag set it was scored with*: several of these only get this
+close under a scheduling flag (`-fno-schedule-insns` / `-fno-schedule-insns2`), which
+is also how `func_800B4B7C`, `func_800A2BB8` and `func_8007B980` were matched.  Treat
+the recorded diff count as a hint, not as a measurement, and re-run `tools/triage.py`
+on the list before starting: it prints the differing instructions of every entry at
+once, which is what makes a shared idiom visible.
 
 Two of the near-misses in the previous revision of this table (`func_800D7D74`
 at 1, `func_800A2910` / `func_800A29BC` at 3) were resolved by the idiom below
@@ -162,6 +168,14 @@ Idioms that have resolved other near-misses (re-apply before rewriting logic):
    the load; `SYM[0] += 1;` with `extern T SYM[];` keeps one address in a
    register for both accesses, which is what the retail build has
    (`func_80098CB8`, `rmwarr` pass).
+0n. **A constant store reveals nothing about its width to m2c.** Storing the
+   constant `0` into `D_8011A564 + i * 2` is decoded as a 32-bit `sw` because the
+   value carries no type, while the retail instruction is a 16-bit `sh`. Declaring
+   the symbol as `extern s16 D_8011A564[];` and writing `D_8011A564[i] = 0;` fixes
+   the width *and* re-creates the `$at`-indexed access shape at the same time
+   (`func_80077AF0`, matched at `-O1 -G0`). The general rule: when a draft's only
+   diff is the width of a load or store of a constant, take the width from the
+   retail instruction rather than from the m2c draft.
 0m. **The retail source really is plain C.** Several "unmatchable" near-misses
    were register-order artefacts of *one* spelling choice rather than of the
    logic; before rewriting an expression, check the near-miss queue for the same

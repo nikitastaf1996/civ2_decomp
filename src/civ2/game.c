@@ -1824,7 +1824,49 @@ INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800774D4);
 
 INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_8007793C);
 
-INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_80077AF0);
+/* @CFLAGS: -O1 -G0 */
+
+void func_80077AF0() {
+    s32 func_80091924__func_80077AF0(M2C_UNK) __asm__("func_80091924");
+    extern M2C_UNK D_8011A548;
+    extern M2C_UNK D_8011A54C;
+    extern M2C_UNK D_8011A55C;
+    extern s16 D_8011A564[];
+    extern M2C_UNK D_8011A56E;
+    extern u8 D_801587B8;
+    extern s32 D_801588D4;
+    s32 var_v0;
+    s32 var_v1;
+
+    M2C_FIELD(&D_8011A548, s16 *, 0) = 0x3F;
+    M2C_FIELD(&D_8011A548, s16 *, 2) = 0;
+    if (D_801588D4 >= 0x3E8) {
+        M2C_FIELD(&D_8011A548, s16 *, 2) = 2;
+    }
+    M2C_FIELD(&D_8011A54C, s16 *, 0) = 0;
+    M2C_FIELD(&D_8011A54C, s16 *, 2) = 0;
+    M2C_FIELD(&D_8011A54C, s16 *, 4) = 0;
+    M2C_FIELD(&D_8011A54C, s16 *, 6) = 6;
+    M2C_FIELD(&D_8011A54C, s16 *, 8) = 4;
+    M2C_FIELD(&D_8011A54C, s16 *, 0x12) = 0;
+    M2C_FIELD(&D_8011A54C, s16 *, 0x14) = 1;
+    M2C_FIELD(&D_8011A54C, s32 *, 0xC) = 0x3F3258;
+    if (func_80091924__func_80077AF0(0x989680) == 0) {
+        M2C_FIELD(&D_8011A54C, s32 *, 0xC) = (s32) (M2C_FIELD(&D_8011A54C, s32 *, 0xC) & 0xFFDFFFFF);
+    }
+    M2C_FIELD(&D_8011A55C, s16 *, 0) = 0;
+    M2C_FIELD(&D_8011A55C, s16 *, 6) = 2;
+    var_v1 = 0;
+
+    do {
+        D_8011A564[var_v1] = 0;
+        var_v1 += 1;
+
+    } while (var_v1 < 5);
+    M2C_FIELD(&D_8011A56E, u8 *, 0) = (u8) D_801587B8;
+    M2C_FIELD(&D_8011A56E, s16 *, 0x20) = 0;
+    M2C_FIELD(&D_8011A56E, s16 *, 0x22) = 0;
+}
 
 INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_80077BF8);
 
