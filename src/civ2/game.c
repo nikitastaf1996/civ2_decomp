@@ -3694,7 +3694,30 @@ void func_80094874(s32 arg0) {
 
 INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800948AC);
 
-INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_80094934);
+void func_80094934(s8 *arg0) {
+    void func_800948AC(void);
+    void func_800E1E94(s8 *);
+    s8 *var_s0;
+    register s8 *var_a1 __asm__("$5");
+    s32 var_v0;
+    u32 var_v1;
+    u32 var_v0u;
+
+    var_s0 = arg0;
+    func_800948AC();
+    var_a1 = var_s0;
+    do {
+        var_v0 = *var_a1;
+        var_v1 = ((u32)var_v0 ^ 0x20) < 1;
+        var_v0u = ((u32)var_v0 ^ 9) < 1;
+        var_v1 = var_v1 | var_v0u;
+        var_a1 += 1;
+    } while (var_v1 != 0);
+    var_a1 += -1;
+    if (var_a1 != var_s0) {
+        func_800E1E94(var_s0);
+    }
+}
 
 INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_80094998);
 
