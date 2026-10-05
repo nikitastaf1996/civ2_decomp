@@ -4229,7 +4229,36 @@ void func_80096C6C() {
 
 INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_80096C74);
 
-INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_80096D48);
+s32 func_80096D48() {
+    s32 func_80095DF0__func_80096D48() __asm__("func_80095DF0");
+    s32 func_800F6484(s32);
+    s32 func_800F6490(s32);
+    s32 *var_v0;
+    s32 var_s0;
+    s32 var_v1;
+    s32 var_a0;
+    s32 var_a1;
+    void (*cb)();
+
+    var_v0 = (s32 *)func_80095DF0__func_80096D48();
+    if (var_v0 != 0) {
+        var_s0 = var_v0[1];
+        var_v0 = (s32 *)func_800F6484(var_s0);
+        {
+    extern s32 D_801592CC;
+            D_801592CC = (s32)var_v0;
+        }
+        var_v0 = (s32 *)func_800F6490(var_s0);
+        var_a1 = *(s16 *)((s8 *)var_s0 + 0x30);
+        var_v1 = *(s32 *)((s8 *)var_s0 + 0x20);
+        if (var_v1 != 0) {
+            var_a0 = (s32)var_v0 << 16;
+            var_a0 = var_a0 >> 16;
+            ((void (*)(s32, s32))var_v1)(var_a0, var_a1);
+        }
+    }
+}
+
 
 INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_80096DAC);
 
@@ -8308,13 +8337,48 @@ void func_800CAF34(void *arg0) {
     M2C_FIELD(arg0, s32 *, 0xC80) = 0;
 }
 
-INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800CAF3C);
+void func_800CAF3C(void *arg0, s32 arg1) {
+    s8 *var_t0;
+    s32 var_a3;
+    s32 var_v0;
+    s32 *var_rec;
+    s32 var_v1;
+    s32 var_a0;
+    s32 var_a1;
+    s32 var_a2;
+
+    var_t0 = arg0;
+    var_a3 = arg1;
+    goto test;
+loop:
+    var_rec = (s32 *)(var_v0 + (s32)var_t0);
+    var_v1 = var_rec[4];
+    var_a0 = var_rec[5];
+    var_a1 = var_rec[6];
+    var_a2 = var_rec[7];
+    var_rec[0] = var_v1;
+    var_rec[1] = var_a0;
+    var_rec[2] = var_a1;
+    var_rec[3] = var_a2;
+    var_a3 += 1;
+test:
+    var_v0 = *(s32 *)(var_t0 + 0xC80);
+    var_v0 -= 1;
+    if (var_a3 < var_v0) {
+        var_v0 = var_a3 << 4;
+        goto loop;
+    }
+    var_v0 = *(s32 *)(var_t0 + 0xC80);
+    var_v0 -= 1;
+    *(s32 *)(var_t0 + 0xC80) = var_v0;
+}
+
 
 INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800CAF9C);
 
 
 void func_800CB020(void *arg0, s32 arg1) {
-    M2C_UNK func_800CAF3C(); /* extern */
+    void func_800CAF3C();
     s32 var_s0;
     s32 var_v0;
 
