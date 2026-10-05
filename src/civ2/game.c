@@ -2390,7 +2390,7 @@ void func_8007BD94(s32 arg0) {
     s32 func_8007B798__func_8007BD94() __asm__("func_8007B798");
     s32 func_8007B6FC__func_8007BD94(s32) __asm__("func_8007B6FC");
     void func_8007B9EC(s32);
-    s32 func_8007B72C(s32 arg0);
+    s32 func_8007B72C();
     extern s16 D_8010D6B4;
     extern s16 D_8010D6B6;
     extern s16 D_8010D6CA;
@@ -7086,9 +7086,50 @@ INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800A4958);
 
 INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800A4A4C);
 
-INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800A4B24);
+s32 func_800A4B24(s32 arg0, s32 arg1) {
+    extern s8 D_8011D52C;
+    extern s32 D_801594F4;
+    extern s32 D_801594F8;
+    s32 temp_a0;
+    s32 temp_a1;
+    s32 var_v0;
+    s32 var_v1;
 
-INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800A4B74);
+    temp_a0 = arg0 - D_801594F4;
+    temp_a1 = (s32) (temp_a0 + (arg1 - D_801594F8)) >> 1;
+    temp_a0 = temp_a0 - temp_a1;
+    var_v1 = (s32)&D_8011D52C;
+    var_v0 = temp_a0 << 1;
+    var_v0 = var_v0 + temp_a0;
+    var_v0 <<= 6;
+    var_v0 = var_v0 + var_v1;
+    temp_a1 <<= 2;
+    temp_a1 = temp_a1 + var_v0;
+    return *(s32 *)(temp_a1 + 0x60);
+}
+
+void func_800A4B74(s32 arg0, s32 arg1, s32 arg2) {
+    extern s8 D_8011D52C;
+    extern s32 D_801594F4;
+    extern s32 D_801594F8;
+    s32 temp_a0;
+    s32 temp_a1;
+    s32 var_v0;
+    s32 var_v1;
+
+    temp_a0 = arg0 - D_801594F4;
+    temp_a1 = (s32) (temp_a0 + (arg1 - D_801594F8)) >> 1;
+    temp_a0 = temp_a0 - temp_a1;
+    var_v1 = (s32)&D_8011D52C;
+    var_v0 = temp_a0 << 1;
+    var_v0 = var_v0 + temp_a0;
+    var_v0 <<= 6;
+    var_v0 = var_v0 + var_v1;
+    temp_a1 <<= 2;
+    temp_a1 = temp_a1 + var_v0;
+    *(s32 *)(temp_a1 + 0x60) = arg2;
+}
+
 
 INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800A4BC0);
 
