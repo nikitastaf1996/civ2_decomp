@@ -251,7 +251,20 @@ s32 func_80014AAC(s32 arg0, s32 arg1) {
     return (*p & var_v0) != 0;
 }
 
-INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_80014AE4);
+void func_80014AE4(s32 arg0, s32 arg1, s32 arg2) {
+    typedef struct { s32 flags; char pad[0x54]; } Rec;
+    extern Rec D_80113F04[];
+    s32 var_v0;
+    s32 var_v1;
+
+    var_v0 = 1;
+    arg1 = var_v0 << arg1;
+    if (arg2 != 0) {
+        D_80113F04[arg0].flags |= arg1;
+    } else {
+        D_80113F04[arg0].flags &= ~arg1;
+    }
+}
 
 INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_80014B58);
 
@@ -291,7 +304,7 @@ INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_80016138);
 
 
 s32 func_800161DC() {
-    M2C_UNK func_80014AE4(); /* extern */
+    void func_80014AE4();
     extern M2C_UNK D_8010BA20;
     extern s32 D_80158860;
     s32 var_s0;
