@@ -143,7 +143,9 @@ void func_800144D4() {
     func_8001416C(0xFF, 0, 0);
 }
 
-INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800144FC);
+void func_800144FC() {
+    volatile s32 pad[6];
+}
 
 void func_8001450C() {
 
@@ -207,11 +209,22 @@ INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_80014638);
 
 INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800146C8);
 
-INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_8001470C);
+s32 func_8001470C(s32 arg0) {
+    extern void * D_80158864;
+    s32 var_v0;
+
+    if (arg0 < 0x10) {
+        arg0 <<= 1;
+        var_v0 = (*(s32 *)((s8 *)D_80158864 + 0x18) >> arg0) & 3;
+    } else {
+        var_v0 = 1;
+    }
+    return var_v0;
+}
 
 
 s32 func_80014744(s32 arg0) {
-    s32 func_8001470C(); /* extern */
+    s32 func_8001470C();
     s32 var_s0;
     s32 var_s1;
 
@@ -228,7 +241,15 @@ s32 func_80014744(s32 arg0) {
 
 INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800147A4);
 
-INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_80014AAC);
+s32 func_80014AAC(s32 arg0, s32 arg1) {
+    typedef struct { s32 flags; char pad[0x54]; } Rec;
+    extern Rec D_80113F04[];
+    s32 *p;
+    s32 var_v0;
+    p = &D_80113F04[arg0].flags;
+    var_v0 = 1 << arg1;
+    return (*p & var_v0) != 0;
+}
 
 INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_80014AE4);
 
@@ -1093,7 +1114,7 @@ INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_80049918);
 
 
 void func_80049FD0(s32 arg0, s32 arg1, s32 arg2) {
-    s32 func_800DD784(); /* extern */
+    s32 func_800DD784();
     M2C_UNK func_800DD7BC(); /* extern */
     extern s32 D_80158654;
     extern s32 D_801594B0;
@@ -1951,7 +1972,31 @@ s32 func_80077D8C(s32 arg0) {
 
 INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_80077E04);
 
-INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_80077EA4);
+void func_80077EA4() {
+    extern s16 D_8011A3F4;
+    extern s16 D_8011A3F6[];
+    extern u8 D_8011A40E[];
+    extern u8 D_8011A426[];
+    s32 arg0;
+    s32 var_v0;
+    s16 *var_v1;
+    s16 *var_a1;
+
+    D_8011A3F4 = 0;
+    arg0 = 0;
+    var_a1 = D_8011A3F6;
+    do {
+        var_v0 = arg0 << 1;
+        var_v1 = (s16 *)(var_v0 + (s32)var_a1);
+        *var_v1 = 0;
+        D_8011A40E[arg0] = 0;
+        var_v0 = var_v0 + arg0;
+        var_v0 = var_v0 << 3;
+        D_8011A426[var_v0] = 0;
+        arg0 += 1;
+        var_v0 = arg0 < 0xC;
+    } while (var_v0 != 0);
+}
 
 INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_80077EFC);
 
@@ -4436,7 +4481,22 @@ INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_80097B54);
 
 INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_80097DBC);
 
-INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_8009800C);
+void func_8009800C() {
+    extern s32 D_80159338;
+    extern u16 D_8011C310[];
+    s32 var_v0;
+    s32 var_v1;
+    u16 *var_a0;
+    var_v0 = D_80159338;
+    var_a0 = D_8011C310;
+    var_v1 = var_v0 & 0x7FFF;
+    var_a0[0] = var_v1;
+    var_v0 = var_a0[0];
+    if (var_v0 == 0) {
+        var_v0 = var_v1 + 1;
+        var_a0[0] = var_v0;
+    }
+}
 
 INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_80098040);
 
@@ -6812,11 +6872,17 @@ void func_800B23FC(void *arg0) {
     }
 }
 
-INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800B245C);
+void func_800B245C(void *arg0, s32 arg1, s32 arg2) {
+    void func_80097474__func_800B245C(s32, s32) __asm__("func_80097474");
+    s32 *row;
+
+    row = (s32 *)((s8 *)M2C_FIELD(arg0, void **, 0x1B4) + arg1 * 0x30);
+    func_80097474__func_800B245C(row[5], arg2);
+}
 
 
 void func_800B2498(s32 arg0, M2C_UNK arg1) {
-    M2C_UNK func_800B245C(); /* extern */
+    void func_800B245C();
     func_800B245C(arg0, 0, arg1);
 }
 
@@ -9140,7 +9206,14 @@ INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800DD590);
 
 INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800DD688);
 
-INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800DD784);
+s32 func_800DD784(arg0, arg1)
+    s32 arg0;
+    s32 arg1;
+{
+    typedef struct { u8 bytes[0x578]; } Civ;
+    extern Civ D_801176D4[];
+    return D_801176D4[arg0].bytes[arg1];
+}
 
 INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800DD7BC);
 
@@ -9159,7 +9232,7 @@ s32 func_800DD82C(s32 arg0) {
 
 
 s32 func_800DD89C() {
-    s32 func_800DD784(); /* extern */
+    s32 func_800DD784();
     s32 func_800DD82C();
     return func_800DD82C(func_800DD784());
 }

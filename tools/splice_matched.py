@@ -23,7 +23,7 @@ KR_FUNCS = {
     # incoming $a0), which only a K&R-style definition accepts.
     "func_80095DF0",
 }
-RET_S32_FUNCS = {"func_80018BF0", "func_800A8690", "func_800CEE9C", "func_800DD89C"}
+RET_S32_FUNCS = {"func_80018BF0", "func_800A8690", "func_800CEE9C", "func_800DD89C", "func_800DD784"}
 
 # Helpers that earlier batches had typed `void`, but which newly spliced callers
 # read a value from.  Only the declaration is widened; bodies are left untouched.
