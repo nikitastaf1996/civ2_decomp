@@ -7522,7 +7522,31 @@ INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800B98D0);
 
 INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800B9940);
 
-INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800B99FC);
+/* @O2 */
+void func_800B99FC(s16 *arg0, s32 arg1, s32 arg2) {
+    s32 func_800E1EB4(s32);
+    s32 unused[2];
+    s16 *var_s1;
+    s32 var_s0;
+    s32 var_v0;
+    s32 var_v1;
+
+    var_s1 = arg0;
+    var_s0 = arg2;
+    var_v0 = func_800E1EB4(arg1);
+    var_v1 = var_v0 << 1;
+    var_v1 = var_v1 + var_v0;
+    var_v1 = var_v1 << 1;
+    var_v1 = var_v1 >> 1;
+    var_v0 = 0xA0;
+    var_v0 = var_v0 - var_v1;
+    var_v1 = var_v1 + 0xA8;
+    var_s1[1] = var_s0;
+    var_s0 = var_s0 + 0xC;
+    var_s1[0] = var_v0;
+    var_s1[2] = var_v1;
+    var_s1[3] = var_s0;
+}
 
 INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800B9A64);
 
@@ -8409,7 +8433,7 @@ INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800CB37C);
 void func_800CB484(s32 arg0) {
     void * func_80094FE0();
     void * func_80095228();
-    M2C_UNK func_800B99FC(); /* extern */
+    void func_800B99FC();
     void func_800C6B2C();
     void func_800C6B34();
     M2C_UNK func_800E1E64(); /* extern */
