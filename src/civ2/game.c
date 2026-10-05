@@ -2444,12 +2444,74 @@ void func_8007BEAC(s32 arg0, s32 arg1, s32 arg2) {
 
 INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_8007BF24);
 
-INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_8007C0BC);
+void func_8007C0BC(arg0)
+    s32 arg0;
+{
+    s32 func_8007B798__func_8007C0BC() __asm__("func_8007B798");
+    s32 func_8007B6FC__func_8007C0BC(s32) __asm__("func_8007B6FC");
+    void func_8007BD28(s32 arg0, M2C_UNK arg1);
+    void func_8007BCD8(s32 arg0, M2C_UNK arg1, M2C_UNK arg2);
+    typedef struct { u8 f; char pad[0x19]; } UnitByte;
+    typedef struct { s8 f; char pad[0x13]; } TypeRec;
+    extern UnitByte D_8010D6BA__func_8007C0BC[] __asm__("D_8010D6BA");
+    extern TypeRec D_8010D285[];
+    extern s16 D_8010D6B4;
+    extern s16 D_8010D6B6;
+    s32 var_s0;
+    s32 var_s2;
+    s32 var_s4;
+    s32 var_s3;
+    s32 var_s5;
+    s32 var_s1;
+    s32 var_v0;
+    s32 var_v1;
+
+    var_s0 = arg0;
+    var_s2 = -1;
+    if (var_s0 < 0) {
+        goto end;
+    }
+    var_v0 = var_s0 * 0x1A;
+    var_s4 = *(s16 *)((s8 *)&D_8010D6B4 + var_v0);
+    var_s3 = *(s16 *)((s8 *)&D_8010D6B6 + var_v0);
+    var_s0 = func_8007B798__func_8007C0BC(var_s0);
+    if (var_s0 < 0) {
+        goto second;
+    }
+    var_s5 = 2;
+    do {
+        var_s1 = func_8007B6FC__func_8007C0BC(var_s0);
+        var_v0 = D_8010D285[D_8010D6BA__func_8007C0BC[var_s0].f].f;
+        if (var_v0 != var_s5) {
+            goto next;
+        }
+        var_s2 = var_s0;
+        func_8007BD28(var_s0, -3);
+    next:
+        var_s0 = var_s1;
+    } while (var_s0 >= 0);
+second:
+    if (var_s2 < 0) {
+        goto end;
+    }
+    var_s0 = func_8007B798__func_8007C0BC(var_s2);
+    if (var_s0 < 0) {
+        goto end;
+    }
+    do {
+        var_s1 = func_8007B6FC__func_8007C0BC(var_s0);
+        func_8007BCD8(var_s0, var_s4, var_s3);
+        var_s0 = var_s1;
+    } while (var_s0 >= 0);
+end:
+    return;
+}
+
 
 
 void func_8007C204(s32 arg0) {
     s32 func_8007B798();
-    M2C_UNK func_8007C0BC(); /* extern */
+    void func_8007C0BC();
     func_8007C0BC();
     func_8007B798(arg0);
 }
@@ -2808,7 +2870,7 @@ void func_8007E4D4(s32 arg0) {
 s32 func_8007E578(s32 arg0) {
     s32 func_8007B798__func_8007E578() __asm__("func_8007B798");
     s32 func_8007B6FC__func_8007E578() __asm__("func_8007B6FC");
-    void func_8007C0BC(s32);
+    void func_8007C0BC();
     s32 func_8007DC6C(s32, s32);
     typedef struct { u8 f; char pad[0x19]; } UnitByte;
     typedef struct { s8 f; char pad[0x13]; } TypeRec;
