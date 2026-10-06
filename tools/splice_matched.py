@@ -100,6 +100,12 @@ def splice_binary(binary: str):
         # Exclude jump-table functions whose .rodata jump tables are still in game.rodata.s
         matched.pop("func_800916F0", None)
         matched.pop("func_80094298", None)
+        # func_8008FADC matches 100% as C, but its splat file also carries the
+        # D_80011488 data blob (a "+" string and word table) that the C body would
+        # replace while nothing re-emits it: splicing it shrinks game.c's .rodata by
+        # 8 bytes and shifts every following section.  Migrate the blob to its own
+        # INCLUDE_RODATA file first.
+        matched.pop("func_8008FADC", None)
 
     for fn in RET_S32_FUNCS:
         if fn in matched:

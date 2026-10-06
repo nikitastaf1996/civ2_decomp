@@ -7,10 +7,10 @@ Both retail PS-X executables on the disc are split, rebuilt from C + assembly, a
 | Executable | Role | Retail Size | SHA-1 | Game Functions | PsyQ 4.2 SDK Symbols | Matched C Functions | Total Accounted |
 | :--- | :--- | :---: | :--- | :---: | :---: | :---: | :---: |
 | **`SLUS_007.92`** | Title / Setup / Intro Movie Player | 290,816 B (`0x47000`) | `362a030a231fc5952010909faf848a8a461bbb3c` | 208 | 375 | **92 / 208 (44.2%)** | **467 / 583 (80.1%)** |
-| **`CIV2.EXE`** | Main Strategy Game Engine | 1,351,680 B (`0x14A000`) | `919bad81720f9b0e129fd5f10fb155cd7aa3c98c` | 1,427 | 390 | **751 / 1,427 (52.6%)** | **1,141 / 1,827 (62.4%)** |
-| **Combined** | **Full Game** | **1,642,496 B** | **100% Byte-Identical** | **1,635** | **765** | **843 / 1,635 (51.6%)** | **1,608 / 2,400 (67.0%)** |
+| **`CIV2.EXE`** | Main Strategy Game Engine | 1,351,680 B (`0x14A000`) | `919bad81720f9b0e129fd5f10fb155cd7aa3c98c` | 1,427 | 390 | **756 / 1,427 (53.0%)** | **1,146 / 1,827 (62.7%)** |
+| **Combined** | **Full Game** | **1,642,496 B** | **100% Byte-Identical** | **1,635** | **765** | **848 / 1,635 (51.9%)** | **1,613 / 2,400 (67.2%)** |
 
-*(Note: 826 of the 828 matched C functions are spliced directly into `src/slus/game.c` and `src/civ2/game.c`; 2 jump-table functions in `CIV2.EXE` — `func_800916F0` and `func_80094298` — also match 100% and await `.rodata` jump-table migration. Counts are `1,427 - $(grep -c INCLUDE_ASM src/civ2/game.c)` and `208 - $(grep -c INCLUDE_ASM src/slus/game.c)`.)*
+*(Note: 831 of the 834 matched C functions are spliced directly into `src/slus/game.c` and `src/civ2/game.c`; 3 `CIV2.EXE` functions — `func_800916F0`, `func_80094298` (jump tables) and `func_8008FADC` (its splat file carries the `D_80011488` data blob, whose migration is described in section 6) — also match 100% but await their `.rodata` migration. Counts are `1,427 - $(grep -c INCLUDE_ASM src/civ2/game.c)` and `208 - $(grep -c INCLUDE_ASM src/slus/game.c)`.)*
 
 ---
 
@@ -341,6 +341,20 @@ between "no new matches" and the batch below:
   same-size-only sweep.  Such drafts cannot be exact matches by construction, so the
   sweep records them separately (`--size-near-out`, one `<diffs> <bytes-delta> <flags>
   <name>` per line) after scoring them the same way.
+
+The repair step paid for itself immediately: with it enabled the same sweep found
+**5 functions that no previous sweep could even score** -- `func_800A375C`,
+`func_800B9350` (`-O2 -G8`), `func_800C7904`, `func_800CB5A4` and `func_800DF0DC` --
+plus `func_8008FADC`, which matches 100% as C but is held back until its `.rodata`
+blob is migrated out of the function's splat file.
+
+Migrating that blob is the next infrastructure job: `migrate_rodata_to_functions:
+True` in `config/us/civ2.yaml` is what puts `D_80011488` (a `"+"` string and a word
+table) inside `func_8008FADC.s`, and splicing the C body then drops 8 bytes from
+`game.c`'s `.rodata`, shifting every later section by eight bytes (`.rodata` goes
+from `0x326C` to `0x3264`, and the first function of the executable moves from
+`0x80013F38` to `0x80013F30`).  The same setting is why the two jump-table
+functions cannot be spliced yet.
 
 Single-function checks go through `tools/try_match.py <draft.c> <func> --bin
 civ2 --opt "-O1 -G8"`, which must reproduce the sweep's diff count for the same
