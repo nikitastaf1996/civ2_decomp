@@ -7,8 +7,8 @@ Both retail PS-X executables on the disc are split, rebuilt from C + assembly, a
 | Executable | Role | Retail Size | SHA-1 | Game Functions | PsyQ 4.2 SDK Symbols | Matched C Functions | Total Accounted |
 | :--- | :--- | :---: | :--- | :---: | :---: | :---: | :---: |
 | **`SLUS_007.92`** | Title / Setup / Intro Movie Player | 290,816 B (`0x47000`) | `362a030a231fc5952010909faf848a8a461bbb3c` | 208 | 375 | **92 / 208 (44.2%)** | **467 / 583 (80.1%)** |
-| **`CIV2.EXE`** | Main Strategy Game Engine | 1,351,680 B (`0x14A000`) | `919bad81720f9b0e129fd5f10fb155cd7aa3c98c` | 1,427 | 390 | **748 / 1,427 (52.4%)** | **1,138 / 1,827 (62.3%)** |
-| **Combined** | **Full Game** | **1,642,496 B** | **100% Byte-Identical** | **1,635** | **765** | **840 / 1,635 (51.4%)** | **1,605 / 2,400 (66.9%)** |
+| **`CIV2.EXE`** | Main Strategy Game Engine | 1,351,680 B (`0x14A000`) | `919bad81720f9b0e129fd5f10fb155cd7aa3c98c` | 1,427 | 390 | **751 / 1,427 (52.6%)** | **1,141 / 1,827 (62.4%)** |
+| **Combined** | **Full Game** | **1,642,496 B** | **100% Byte-Identical** | **1,635** | **765** | **843 / 1,635 (51.6%)** | **1,608 / 2,400 (67.0%)** |
 
 *(Note: 826 of the 828 matched C functions are spliced directly into `src/slus/game.c` and `src/civ2/game.c`; 2 jump-table functions in `CIV2.EXE` — `func_800916F0` and `func_80094298` — also match 100% and await `.rodata` jump-table migration. Counts are `1,427 - $(grep -c INCLUDE_ASM src/civ2/game.c)` and `208 - $(grep -c INCLUDE_ASM src/slus/game.c)`.)*
 
@@ -58,42 +58,46 @@ To maximize automated byte-for-byte matching before manual decompilation, severa
 ### 3b. Remaining Near-Misses (resume here)
 
 `tools/auto_match_sweep.py --near N` also records the functions that are *close*
-but not exact, which turns the sweep into a triage tool. At `--near 10` the
-current 765 unmatched `CIV2.EXE` functions contain 35 within ten differing
-instructions of the retail code; the list is written to
-`/tmp/near_misses_civ2.txt` sorted by diff count and is the cheapest place for a
-manual pass to start. Regenerate it after every merge -- the list is a snapshot,
-and entries that have since been matched (or whose recorded diff count came from
-a stale draft) otherwise masquerade as free wins. Take the minimum over *every*
-variant cache (`tools/m2c_variants.py` rewrites one spelling into another, so a
-function that is exact under the plain draft can be a near miss under a rewrite
-and vice versa -- merge the per-variant `--near-out` files, do not overwrite
-them). The smallest remaining entries are:
+but not exact, which turns the sweep into a triage tool.  The queue is a snapshot
+of one flag matrix over one draft cache, so build it from **every** variant cache
+(`tools/m2c_variants.py` rewrites one spelling into another: a function that is
+exact under the plain draft can be a near miss under a rewrite and vice versa --
+pass each cache its own `--near-out` file and merge, do not overwrite) and from a
+flag matrix wide enough to include the scheduling flags
+(`-fno-schedule-insns[2]`, `-fno-delayed-branch`, `-fomit-frame-pointer`), which is
+how `func_800B4B7C`, `func_800A2BB8` and `func_8007B980` were matched.
+
+The queue as of this revision (679 unmatched `CIV2.EXE` functions, base + `_v2`
+caches, twelve flag sets, `--near 40`):
 
 | Function | Diff | Flag set | What is left |
 | :--- | ---: | :--- | :--- |
-| `func_80077BF8` | 1 | `-O1 -G0` | The else-path tail call re-materialises `$a0 = &sp10` in the `jal` delay slot where the retail build reuses the value the branch delay slot already left there (cc1 chose the fall-through thread for the delay-slot fill; retail moved the instruction out of the else block) |
-| `func_80030080` | 3 | `-O2 -G8 -fno-delayed-branch` | Retail tests `bltz` then `slti` (a `arg0 < 0 \|\| arg0 > 8` range test); m2c's draft folds it into one `sltiu` |
-| `func_800A7D94` | 5 | `-O1 -G0 -fno-schedule-insns2` | Address materialisation order around a `%gp_rel` load |
-| `func_80088B78` | 5 | `-O1 -G8 -fno-schedule-insns` | `&D_8010CC6B` must be materialised before the argument load |
-| `func_800B26A0` | 5 | `-O1 -G8 -fno-schedule-insns` | Retail loads straight into `$s1`; the draft materialises `$v0` first (one extra live temporary) |
-| `func_800C6E20`, `func_800C855C`, `func_800C8720`, `func_800E01AC`, `func_800142CC`, `func_800ADAC0` | 5 | `-O1/-O2` + `-fno-schedule-insns[2]` | cc1 hands the two callee-saved temporaries out in the opposite order |
-| `func_80020B10`, `func_800A1428`, `func_800A23EC`, `func_800A4828`, `func_800B245C` | 6 | see `--opts` in the sweep log | — |
+| `func_8007BF24` | 8 | `-O1 -G0` | **matched** -- see idiom 0p: the call arguments have to be written as array subscripts on a `u8[]`-declared global, not as `(EXPR) + (void *)&SYM` |
+| `func_80095A10` | 8 | `-O1 -G8` | A 28-byte copy loop. The retail build keeps the *high half* of `&D_801A0000` in `$a1` and folds the low half into every load and into `addiu $a1,$a1,%lo(SYM+1)`; every pointer spelling tried so far makes cc1 materialise the full address with a second `addiu` |
+| `func_80070600` | 9 | `-O1 -G8` | -- |
+| `func_800DE1C8` | 9 | `-O1 -G8` | The `lui/addiu` of `func_800DE830` and the 0x138-byte frame match; the tail `jal` sequence does not |
+| `func_80089BA4` | 10 | `-O1 -G8` | Retail materialises `%hi/%lo(D_80113F08)` into `$v0` *before* loading `0x10($sp)` and adds into `$v1`; the draft does it the other way round (idiom 0k / `addrfirst` territory) |
+| `func_800CEAA8` | 10 | `-O2 -G8` | -- |
+| `func_800CEE08` | 10 | `-O2 -G8 -fno-delayed-branch` | Two `abs`-style halves; the draft branches on the copy of `$a1` where retail branches on `$a1` itself and leaves the copy in the delay slot |
+| `func_800B4560` | 5 | `-O1 -G8` | **matched** -- see idiom 0q: m2c's `if (x != 1) { return A; } return B;` has to be inverted to `if (x == 1) { return B; } return A;` |
 
-Every entry carries the *flag set it was scored with*: several of these only get this
-close under a scheduling flag (`-fno-schedule-insns` / `-fno-schedule-insns2`), which
-is also how `func_800B4B7C`, `func_800A2BB8` and `func_8007B980` were matched.  Treat
-the recorded diff count as a hint, not as a measurement, and re-run `tools/triage.py`
-on the list before starting: it prints the differing instructions of every entry at
-once, which is what makes a shared idiom visible.
+`func_800B4560` also shows why a queue built only from same-size drafts misses
+things: its 5 diffs are recorded at a **-4 byte** draft, which the sweep used to
+skip outright (see `--size-tolerance` in section 6).
 
-Two of the near-misses in the previous revision of this table (`func_800D7D74`
-at 1, `func_800A2910` / `func_800A29BC` at 3) were resolved by the idiom below
-rather than by the register-order change they looked like; five of the six
-1-diff entries the sweep had recorded were already matched, and one
-(`func_800CEF38`) was reproducible only after fixing `tools/try_match.py`
-(see section 6). Treat the recorded diff count as a hint, not as a measurement.
+The same build of the queue for the 116 unmatched `SLUS_007.92` functions has 19
+entries at `--near 40`, the closest at 5 diffs.
 
+Treat the recorded diff count as a hint, not as a measurement: a positional diff
+misreports every instruction after an insertion or deletion as differing.  Aligning
+the two instruction streams first (`difflib` over a normalised spelling) turns
+"27 diffs" into "one rotated instruction", which is what `tools/align_diff.py`
+does:
+
+```bash
+python3 tools/align_diff.py func_8007BF24 --all-opts    # score a function over the flag matrix
+python3 tools/align_diff.py func_8007BF24 --show-all    # print the whole aligned listing
+```
 Idioms that have resolved other near-misses (re-apply before rewriting logic):
 0. **Materialised symbol base.** cc1 folds every constant symbol access into
    `%lo(SYM+N)($at)` unless the accesses read as *struct member references*:
@@ -183,6 +187,31 @@ Idioms that have resolved other near-misses (re-apply before rewriting logic):
    register-allocation coin flip can be a structural difference in disguise
    (`func_800198E8` shows the same instruction count and the same registers, only
    the operand order of one `addu` differs).
+
+0p. **Array subscript for a global used as a call argument.** m2c renders
+   `func(&SYM[EXPR], &SYM2[EXPR2])` as `(EXPR) + (void *)&SYM` arithmetic on the
+   address.  For `func_8007BF24` that spelling made cc1 evaluate the second call's
+   base before the index chain, so the draft was one rotated `addiu` away from the
+   retail bytes.  Declaring the global as `extern u8 SYM[];` and writing the
+   arguments as `&SYM[EXPR]` reproduces the retail schedule exactly -- and the
+   rewrite is needed for *call arguments*, which `tools/m2c_variants.py`'s
+   `arrindex` pass does not touch (it only rewrites load/store shapes and only
+   when the byte offset is literally `X * sizeof`).
+0q. **Invert the condition and return early.** m2c lifts a two-armed `if` into
+   `if (cond) { return A; } return B;` with the arms in the order they appear in
+   the retail *layout*.  When the retail layout is the other way round --
+   `func_800B4560` has the short arm first in the source and the long arm after a
+   `j` -- the draft compiles to the same instructions in a different order.
+   Writing the test inverted (`if (x == 1) { return arg1; }`) puts the arms back
+   where they belong.  Both spellings are three lines apart in the source and the
+   difference is invisible in the m2c output, so try the flip before rewriting
+   logic.
+0r. **A varargs stub is `RET f(s32 arg0, ...) {}`.** GCC emits exactly the four
+   `sw $a0..$a3` register-save slots and a `jr $ra` for a body-less variadic
+   function, which is the whole body of `func_80014514` and `func_8001452C`.  m2c
+   cannot see the `...` and prints a four-parameter prototype, so the draft compiles
+   to two instructions and never reaches the queue (its compiled size is 0x10 bytes
+   short).  This is the first entry the new `--size-tolerance` mode finds.
 
 ### 4. Call-Graph Impact Analysis & Manual Decompilation of Core Engine Hubs
 Using `tools/callgraph_impact.py`, all unmatched functions in `SLUS_007.92` and `CIV2.EXE` were ranked by caller fan-in, total call sites, and global data array access frequency. The **38 highest-impact hub functions** (9 in `SLUS_007.92` and 29 in `CIV2.EXE`, accounting for **2,369 call sites** across both executables) were manually decompiled, verified to 100% byte-for-byte identity with `tools/try_match.py`, and spliced into `src/slus/game.c` and `src/civ2/game.c`:
@@ -288,6 +317,30 @@ wrong rewrite cannot regress the build. The variant pass currently contributes
 `func_800466E4`, `func_800B8DC0`, `func_800C6EB4` (stack-object and halfword
 passes) and `func_800986D0` plus the `func_800A2910` / `func_800A29BC` pair
 (read-modify-write pass).
+
+Two options widen what the sweep can score at all, and both made the difference
+between "no new matches" and the batch below:
+
+* **`tools/draft_repair.py` (wired into the sweep's compile step).** 184 of the 675
+  unmatched `CIV2.EXE` drafts never reached the byte comparison because cc1 rejected
+  them, and 85 of those fail for reasons that have nothing to do with the function:
+  m2c prints a full prototype for every callee while the call sites supply fewer
+  arguments (legal under O32, a constraint violation in C89 -- the splicer already
+  emits an unprototyped declaration for the same reason), and m2c occasionally uses a
+  symbol it never declared (`sp`, `saved_reg_fp`, a `func_*` seen first in a delay
+  slot).  The repair rewrites those declarations, retypes the integer locals m2c
+  dereferences, sizes a bare `sp` from the retail prologue, and is only accepted when
+  the repaired draft *compiles*; a match still has to be byte-exact, so a wrong
+  repair can only cost one compile.  491 of 675 drafts already compiled, 85 more
+  compile after repair, and 99 stay broken (mostly `void` dereferences).
+* **`--size-tolerance BYTES`.** The byte comparison used to `continue` on any draft
+  whose compiled length differed from the retail function, so a draft that is
+  structurally right but one instruction short could never be seen: `func_8001452C`
+  (a varargs stub m2c renders as a four-argument prototype, 16 bytes short) and
+  `func_800B4560` (5 diffs at a 4-byte-short draft) are both invisible to a
+  same-size-only sweep.  Such drafts cannot be exact matches by construction, so the
+  sweep records them separately (`--size-near-out`, one `<diffs> <bytes-delta> <flags>
+  <name>` per line) after scoring them the same way.
 
 Single-function checks go through `tools/try_match.py <draft.c> <func> --bin
 civ2 --opt "-O1 -G8"`, which must reproduce the sweep's diff count for the same
