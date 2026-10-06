@@ -7,10 +7,14 @@ Both retail PS-X executables on the disc are split, rebuilt from C + assembly, a
 | Executable | Role | Retail Size | SHA-1 | Game Functions | PsyQ 4.2 SDK Symbols | Matched C Functions | Total Accounted |
 | :--- | :--- | :---: | :--- | :---: | :---: | :---: | :---: |
 | **`SLUS_007.92`** | Title / Setup / Intro Movie Player | 290,816 B (`0x47000`) | `362a030a231fc5952010909faf848a8a461bbb3c` | 208 | 375 | **93 / 208 (44.7%)** | **468 / 583 (80.3%)** |
-| **`CIV2.EXE`** | Main Strategy Game Engine | 1,351,680 B (`0x14A000`) | `919bad81720f9b0e129fd5f10fb155cd7aa3c98c` | 1,427 | 390 | **764 / 1,427 (53.5%)** | **1,154 / 1,827 (63.2%)** |
-| **Combined** | **Full Game** | **1,642,496 B** | **100% Byte-Identical** | **1,635** | **765** | **857 / 1,635 (52.4%)** | **1,622 / 2,400 (67.6%)** |
+| **`CIV2.EXE`** | Main Strategy Game Engine | 1,351,680 B (`0x14A000`) | `919bad81720f9b0e129fd5f10fb155cd7aa3c98c` | 1,427 | 390 | **768 / 1,427 (53.8%)** | **1,158 / 1,827 (63.4%)** |
+| **Combined** | **Full Game** | **1,642,496 B** | **100% Byte-Identical** | **1,635** | **765** | **861 / 1,635 (52.7%)** | **1,626 / 2,400 (67.8%)** |
 
-*(Note: 840 of the 843 matched C functions are spliced directly into `src/slus/game.c` and `src/civ2/game.c`; 3 `CIV2.EXE` functions — `func_800916F0`, `func_80094298` (jump tables) and `func_8008FADC` (its splat file carries the `D_80011488` data blob, whose migration is described in section 6) — also match 100% but await their `.rodata` migration. Counts are `1,427 - $(grep -c INCLUDE_ASM src/civ2/game.c)` and `208 - $(grep -c INCLUDE_ASM src/slus/game.c)`.)*
+*(Note: every matched C function is now spliced directly into `src/slus/game.c` and
+`src/civ2/game.c` — including the last three holdouts, whose `.rodata` (a `"+"` string blob
+for `func_8008FADC`, jump tables for `func_800916F0` and `func_80094298`) used to keep them
+out of the build; see section 6. Counts are `1,427 - $(grep -c INCLUDE_ASM src/civ2/game.c)`
+and `208 - $(grep -c INCLUDE_ASM src/slus/game.c)`.)*
 
 ---
 
@@ -36,7 +40,7 @@ Unlike single-binary PS1 games, *Civilization II* splits its code across two PS-
 ### 2. Compiler & Toolchain Fingerprint
 - **Compiler**: **PsyQ GCC 2.7.2** (`GNU C 2.7.2 [AL 1.1, MM 40] Sony Playstation`)
   - Flags: `-O1 -G8 -mips1 -mcpu=3000 -mgas -msoft-float -fgnu-linker` (with a small subset of functions compiled at `-O2 -G8`, annotated with `/* @O2 */`).
-- **Assembler Preprocessor**: **`ASPSX 2.56`** (emulated via `maspsx --aspsx-version=2.56 --expand-div -G8` followed by `mipsel-linux-gnu-as -G0`).
+- **Assembler Preprocessor**: **`ASPSX 2.56`** (emulated via `maspsx --aspsx-version=2.56 --expand-div -G8` followed by `mipsel-linux-gnu-as -G0`).  Two cc1-vs-aspsx divergences are corrected in `tools/maspsx_wrap.py`: the `$at` symbol-offset expansion (section 5) and the jump-table alignment (cc1's `.align 3` downgraded to `.align 2`, section 6).
 - **SDK Version**: **Sony PsyQ 4.2 (`420`)** (verified via `lab313ru/psx_psyq_signatures` against embedded RCS strings `$Id: intr.c,v 1.76`, `$Id: bios.c,v 1.86`, `$Id: sys.c,v 1.140 1998/01/12`, plus C++ `LIBSN.LIB` operators `_OP_VDEL.OBJ`, `_OP_VNEW.OBJ`, `_OP_DELE.OBJ` in `CIV2.EXE`).
 
 ### 3. Automated Decompilation Enhancements
@@ -419,13 +423,29 @@ The repair step paid for itself immediately: with it enabled the same sweep foun
 plus `func_8008FADC`, which matches 100% as C but is held back until its `.rodata`
 blob is migrated out of the function's splat file.
 
-Migrating that blob is the next infrastructure job: `migrate_rodata_to_functions:
-True` in `config/us/civ2.yaml` is what puts `D_80011488` (a `"+"` string and a word
-table) inside `func_8008FADC.s`, and splicing the C body then drops 8 bytes from
-`game.c`'s `.rodata`, shifting every later section by eight bytes (`.rodata` goes
-from `0x326C` to `0x3264`, and the first function of the executable moves from
-`0x80013F38` to `0x80013F30`).  The same setting is why the two jump-table
-functions cannot be spliced yet.
+The `.rodata` that `migrate_rodata_to_functions: True` keeps inside a function's own
+splat file (`D_80011488`, a `"+"` string plus a word table, for `func_8008FADC`; the jump
+tables `jtbl_8001166C` and `jtbl_80011934` for `func_800916F0` / `func_80094298`) needs no
+separate `.rodata` file after all, because it is simply the *C* form of the same data:
+cc1 emits a function's string literals and switch tables as a `.rdata` block immediately
+after the code that uses them, and `maspsx` turns each `.rdata` into a `.section .rodata`
+in place — so splicing the C body lands the bytes at the original point of the `.rodata`
+stream.  Three details decide whether that stays byte-exact:
+
+* **m2c's escaped string literals are octal-ambiguous.**  Its rendering of `D_80011488`
+  contains `\b\01\00\03\0`, which cc1 re-reads as the octal escapes `\01`, `\00`, `\03`
+  and silently collapses three table entries into one.  Re-escaping every byte as a
+  three-digit octal escape (`\053\000\000…`) reproduces the 148-byte blob exactly.
+* **A string literal carries an implicit NUL**, so a literal of all 148 bytes compiles to
+  149 bytes plus 3 of alignment padding (`.rodata` `0x326C → 0x327C`).  The table's own
+  last byte is a zero, so the C literal only needs the first 147 bytes and cc1's
+  terminator supplies the 148th.
+* **cc1 asks for 8-byte alignment on jump tables** (`.align 3`), while the retail tables sit
+  directly after 4-aligned blobs (`jtbl_8001166C` at `0x8001166C`, `jtbl_80011934` at
+  `0x80011934`) — the original assembler plainly did not pad them.  GNU as does, shifting
+  `.rodata` by 4 bytes per table, so `tools/maspsx_wrap.py` now downgrades that one
+  directive to `.align 2` (the codegen itself already matched, and the tables' 50 / 52
+  entries were verified slot-for-slot against retail before splicing).
 
 Single-function checks go through `tools/try_match.py <draft.c> <func> --bin
 civ2 --opt "-O1 -G8"`, which must reproduce the sweep's diff count for the same

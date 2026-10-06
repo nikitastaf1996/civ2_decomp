@@ -108,6 +108,17 @@ def main():
                 annotated_lines.append(f"# MASPSX_GPREL: {' '.join(gprel)}")
                 annotated_lines.extend(blocks[fn])
 
+    # cc1 emits `.align 3` (8 bytes) ahead of every jump table it generates, but the
+    # retail tables are only 4-byte aligned: `jtbl_8001166C` sits at 0x8001166C and
+    # `jtbl_80011934` at 0x80011934, each directly abutting the 4-aligned blob before
+    # it, so the original assembler never padded them.  GNU as honours `.align 3` as
+    # an 8-byte request and inserts 4 bytes, which shifts every later `.rodata` blob
+    # (and therefore the whole text section) by four.  Jump tables are the only
+    # source of `.align 3` in cc1's output here, so downgrade it to 4-byte alignment.
+    annotated_lines = [
+        re.sub(r"^(\s*\.align\s+)3\s*$", r"\g<1>2", line) for line in annotated_lines
+    ]
+
     maspsx_py = os.path.join(ROOT, "external", "maspsx", "maspsx.py")
     r = subprocess.run(
         [sys.executable, maspsx_py, "--aspsx-version=2.56", "--expand-div", "-G8"],

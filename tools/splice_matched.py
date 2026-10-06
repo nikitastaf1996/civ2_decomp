@@ -96,16 +96,13 @@ def splice_binary(binary: str):
     if os.path.exists(pkl_path):
         for fn, rec in pickle.load(open(pkl_path, "rb")).items():
             matched.setdefault(fn, rec)
-    if binary == "civ2":
-        # Exclude jump-table functions whose .rodata jump tables are still in game.rodata.s
-        matched.pop("func_800916F0", None)
-        matched.pop("func_80094298", None)
-        # func_8008FADC matches 100% as C, but its splat file also carries the
-        # D_80011488 data blob (a "+" string and word table) that the C body would
-        # replace while nothing re-emits it: splicing it shrinks game.c's .rodata by
-        # 8 bytes and shifts every following section.  Migrate the blob to its own
-        # INCLUDE_RODATA file first.
-        matched.pop("func_8008FADC", None)
+    # func_800916F0 / func_80094298 / func_8008FADC all own .rodata that splat keeps in
+    # their nonmatching .s files.  They are spliced from C anyway: cc1 emits a function's
+    # string literals and jump tables as `.rdata` immediately after its body, which
+    # maspsx_wrap turns back into a `.section .rodata` block at the same point of the
+    # stream -- so the bytes land in .rodata in the original link order, provided the
+    # emitted blobs are byte-identical (checked: 148-byte "+" blob at 0x1C88; 50- and
+    # 52-entry jump tables at 0x1E6C / 0x2134 with identical target offsets).
 
     for fn in RET_S32_FUNCS:
         if fn in matched:
