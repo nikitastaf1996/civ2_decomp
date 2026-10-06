@@ -11390,7 +11390,19 @@ loop_5:
     func_800D7D74();
 }
 
-INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800D8AE8);
+void func_800D8AE8(s32 arg0, s32 arg1, s32 arg2) {
+    void func_80103CC8(M2C_UNK, s32, s16, s16 *, s32);
+    s16 func_800E1EB4(s32, s32, s32);
+    s16 sp18[4];
+    s32 temp_a2;
+
+    sp18[0] = arg1;
+    temp_a2 = arg2 - 4;
+    sp18[1] = temp_a2;
+    sp18[2] = 0x140;
+    sp18[3] = 0xF0;
+    func_80103CC8(0, arg0, func_800E1EB4(arg0, arg1, temp_a2), sp18, 0x10);
+}
 
 INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800D8B4C);
 
