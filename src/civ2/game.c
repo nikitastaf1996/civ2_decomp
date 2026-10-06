@@ -11463,7 +11463,37 @@ void func_800DE160(void *arg0, M2C_UNK arg1) {
     func_800FA7D4(arg0, arg1);
 }
 
-INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800DE1C8);
+/* @CFLAGS: -O1 -G0 */
+
+s32 func_800DE1C8(void *arg0, s32 arg1) {
+    void func_800A74A4();
+    M2C_UNK func_800DE670(void *);                      /* extern */
+    M2C_UNK func_800F5EE0(void *, M2C_UNK *, M2C_UNK, M2C_UNK, s32); /* extern */
+    M2C_UNK func_800F5FE8(void *, M2C_UNK *);           /* extern */
+    M2C_UNK func_800F630C(void *, M2C_UNK *);           /* extern */
+    M2C_UNK func_80106C88(M2C_UNK *);                   /* extern */
+    extern M2C_UNK D_80159258;
+    void func_800DE830__func_800DE1C8() __asm__("func_800DE830");
+    u8 sp118[0x110];
+    void *temp_s0;
+
+    func_800A74A4();
+    M2C_FIELD(arg0, s32 *, 0x210) = arg1;
+    if (arg1 <= 0) {
+        M2C_FIELD(arg0, s32 *, 0x210) = (s32) (~arg1 + 1);
+    }
+    func_80106C88(&sp118[0x100]);
+    temp_s0 = arg0 + 0x84;
+    func_800F5EE0(temp_s0, &D_80159258, 0x800, 0, 0x3C);
+    func_800F5FE8(temp_s0, "WINWIN.STR");
+    func_800F630C(temp_s0, (void *)&func_800DE830__func_800DE1C8);
+    M2C_FIELD(arg0, s16 *, 0x640) = 0;
+    M2C_FIELD(arg0, s16 *, 0x642) = 0x3C;
+    M2C_FIELD(arg0, s16 *, 0x644) = 0x140;
+    M2C_FIELD(arg0, s16 *, 0x646) = 0xB4;
+    func_800DE670(arg0);
+    return 1;
+}
 
 INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800DE284);
 

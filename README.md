@@ -7,10 +7,10 @@ Both retail PS-X executables on the disc are split, rebuilt from C + assembly, a
 | Executable | Role | Retail Size | SHA-1 | Game Functions | PsyQ 4.2 SDK Symbols | Matched C Functions | Total Accounted |
 | :--- | :--- | :---: | :--- | :---: | :---: | :---: | :---: |
 | **`SLUS_007.92`** | Title / Setup / Intro Movie Player | 290,816 B (`0x47000`) | `362a030a231fc5952010909faf848a8a461bbb3c` | 208 | 375 | **93 / 208 (44.7%)** | **468 / 583 (80.3%)** |
-| **`CIV2.EXE`** | Main Strategy Game Engine | 1,351,680 B (`0x14A000`) | `919bad81720f9b0e129fd5f10fb155cd7aa3c98c` | 1,427 | 390 | **761 / 1,427 (53.3%)** | **1,151 / 1,827 (63.0%)** |
-| **Combined** | **Full Game** | **1,642,496 B** | **100% Byte-Identical** | **1,635** | **765** | **854 / 1,635 (52.2%)** | **1,619 / 2,400 (67.5%)** |
+| **`CIV2.EXE`** | Main Strategy Game Engine | 1,351,680 B (`0x14A000`) | `919bad81720f9b0e129fd5f10fb155cd7aa3c98c` | 1,427 | 390 | **762 / 1,427 (53.4%)** | **1,152 / 1,827 (63.1%)** |
+| **Combined** | **Full Game** | **1,642,496 B** | **100% Byte-Identical** | **1,635** | **765** | **855 / 1,635 (52.3%)** | **1,620 / 2,400 (67.5%)** |
 
-*(Note: 837 of the 840 matched C functions are spliced directly into `src/slus/game.c` and `src/civ2/game.c`; 3 `CIV2.EXE` functions — `func_800916F0`, `func_80094298` (jump tables) and `func_8008FADC` (its splat file carries the `D_80011488` data blob, whose migration is described in section 6) — also match 100% but await their `.rodata` migration. Counts are `1,427 - $(grep -c INCLUDE_ASM src/civ2/game.c)` and `208 - $(grep -c INCLUDE_ASM src/slus/game.c)`.)*
+*(Note: 838 of the 841 matched C functions are spliced directly into `src/slus/game.c` and `src/civ2/game.c`; 3 `CIV2.EXE` functions — `func_800916F0`, `func_80094298` (jump tables) and `func_8008FADC` (its splat file carries the `D_80011488` data blob, whose migration is described in section 6) — also match 100% but await their `.rodata` migration. Counts are `1,427 - $(grep -c INCLUDE_ASM src/civ2/game.c)` and `208 - $(grep -c INCLUDE_ASM src/slus/game.c)`.)*
 
 ---
 
@@ -259,6 +259,10 @@ Idioms that have resolved other near-misses (re-apply before rewriting logic):
      saved registers where retail keeps the buffer.  Sizing it (`u8 sp20[0x38];`, with
      the call sites passing the array) reproduces the frame exactly.  A frame whose
      *offsets* all match but whose size does not is this bug, not a codegen one.
+     `func_800DE1C8` is the same bug one level deeper: m2c named the local `sp118`
+     after the *address* it saw (`addiu $a0,$sp,0x118`), but the frame is only
+     explained by a 0x110-byte buffer based at `$sp+0x18` of which the passed
+     address is a sub-object -- `u8 sp118[0x110];` plus `&sp118[0x100]`.
 0r. **A varargs stub is `RET f(s32 arg0, ...) {}`.** GCC emits exactly the four
    `sw $a0..$a3` register-save slots and a `jr $ra` for a body-less variadic
    function, which is the whole body of `func_80014514` and `func_8001452C`.  m2c
