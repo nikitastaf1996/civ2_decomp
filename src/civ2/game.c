@@ -10341,7 +10341,39 @@ s32 func_800CEA98(s32 arg0) {
     return arg0 + D_80121BEC;
 }
 
-INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800CEAA8);
+/* @O2 */
+s32 func_800CEAA8(u8 *arg0, u8 *arg1) {
+
+    u8 *var_a0;
+    u8 *var_a1;
+    s32 var_a2;
+    s32 var_v1;
+
+    var_a0 = arg0;
+    var_a1 = arg1;
+    if (*var_a0 != 0) {
+loop_1:
+        if (*(volatile u8 *)var_a1 != 0) {
+            var_v1 = *var_a0;
+            var_a2 = *var_a1;
+            if ((u32) (var_v1 - 0x61) < 0x1AU) {
+                var_v1 -= 0x20;
+            }
+            if ((u32) ((var_a2 - 0x61) & 0xFF) < 0x1AU) {
+                var_a2 -= 0x20;
+            }
+            if ((var_v1 & 0xFF) == (var_a2 & 0xFF)) {
+                var_a0 += 1;
+                var_a1 += 1;
+                if (*var_a0 != 0) {
+                    goto loop_1;
+                }
+            }
+        }
+    }
+    return *var_a0 - *var_a1;
+}
+
 
 INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800CEB2C);
 
@@ -11801,7 +11833,19 @@ s32 func_800E01AC(s32 arg0, M2C_UNK arg1, s32 arg2, M2C_UNK arg3, s32 arg4) {
 }
 __asm__(".word 0x00000000");
 
-INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800E026C);
+/* @CFLAGS: -O1 -G0 */
+void func_800E026C() {
+    register s16 *var_v0 asm("$2");
+    s32 var_v1;
+
+    __asm__("addu %0, $s1, $zero" : "=r" (var_v0));
+    var_v1 = 0x400;
+    do {
+        *var_v0 = 0;
+        var_v1 -= 1;
+        var_v0 += 1;
+    } while (var_v1 != 0);
+}
 
 INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800E028C);
 

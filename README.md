@@ -7,10 +7,10 @@ Both retail PS-X executables on the disc are split, rebuilt from C + assembly, a
 | Executable | Role | Retail Size | SHA-1 | Game Functions | PsyQ 4.2 SDK Symbols | Matched C Functions | Total Accounted |
 | :--- | :--- | :---: | :--- | :---: | :---: | :---: | :---: |
 | **`SLUS_007.92`** | Title / Setup / Intro Movie Player | 290,816 B (`0x47000`) | `362a030a231fc5952010909faf848a8a461bbb3c` | 208 | 375 | **93 / 208 (44.7%)** | **468 / 583 (80.3%)** |
-| **`CIV2.EXE`** | Main Strategy Game Engine | 1,351,680 B (`0x14A000`) | `919bad81720f9b0e129fd5f10fb155cd7aa3c98c` | 1,427 | 390 | **757 / 1,427 (53.0%)** | **1,147 / 1,827 (62.8%)** |
-| **Combined** | **Full Game** | **1,642,496 B** | **100% Byte-Identical** | **1,635** | **765** | **850 / 1,635 (52.0%)** | **1,615 / 2,400 (67.3%)** |
+| **`CIV2.EXE`** | Main Strategy Game Engine | 1,351,680 B (`0x14A000`) | `919bad81720f9b0e129fd5f10fb155cd7aa3c98c` | 1,427 | 390 | **759 / 1,427 (53.2%)** | **1,149 / 1,827 (62.9%)** |
+| **Combined** | **Full Game** | **1,642,496 B** | **100% Byte-Identical** | **1,635** | **765** | **852 / 1,635 (52.1%)** | **1,617 / 2,400 (67.4%)** |
 
-*(Note: 833 of the 836 matched C functions are spliced directly into `src/slus/game.c` and `src/civ2/game.c`; 3 `CIV2.EXE` functions — `func_800916F0`, `func_80094298` (jump tables) and `func_8008FADC` (its splat file carries the `D_80011488` data blob, whose migration is described in section 6) — also match 100% but await their `.rodata` migration. Counts are `1,427 - $(grep -c INCLUDE_ASM src/civ2/game.c)` and `208 - $(grep -c INCLUDE_ASM src/slus/game.c)`.)*
+*(Note: 835 of the 838 matched C functions are spliced directly into `src/slus/game.c` and `src/civ2/game.c`; 3 `CIV2.EXE` functions — `func_800916F0`, `func_80094298` (jump tables) and `func_8008FADC` (its splat file carries the `D_80011488` data blob, whose migration is described in section 6) — also match 100% but await their `.rodata` migration. Counts are `1,427 - $(grep -c INCLUDE_ASM src/civ2/game.c)` and `208 - $(grep -c INCLUDE_ASM src/slus/game.c)`.)*
 
 ---
 
@@ -225,6 +225,25 @@ Idioms that have resolved other near-misses (re-apply before rewriting logic):
    (`temp_v0 = ...; SYM = temp_v0;`) keeps the arithmetic in a wider mode and
    reproduces `+0xA0`.  Any spelling that hides the narrowing (a cast, a mask, an
    explicit pointer store) leaves the `-96` fold in place.
+0u. **An incoming register that C cannot name needs an asm output.** `func_800E026C`
+   is eight instructions that read `$s1` (a pointer the caller leaves there), zero a
+   0x400-halfword buffer through it and return -- there is no C spelling for "read a
+   callee-saved register the caller filled in": a *file-scope* `register ... asm("s1")`
+   reproduces it, but gcc rejects one that follows any function definition and
+   reserving `$s1`/`$v0` for the whole translation unit would rewrite every other
+   function in the file.  The working spelling binds a **local** register variable and
+   copies into it from an asm output: `register s16 *var_v0 asm("$2");` plus
+   `__asm__("addu %0, $s1, $zero" : "=r" (var_v0));`.  The asm text is emitted
+   verbatim, the register variable keeps the value in `$v0` for the rest of the body,
+   and nothing is reserved globally.
+0v. **A repeated read in retail is a `volatile` read in the source.** `func_800CEAA8`
+   is a case-insensitive `strcmp`: retail loads `lbu $v0, 0x0($a1)` for the loop's
+   null test *and* loads `lbu $a2, 0x0($a1)` again inside the body, i.e. the same byte
+   read twice.  cc1 remembers the value (so the draft replaced the second load with a
+   register move) unless the read is spelled `*(volatile u8 *)var_a1` -- which also
+   keeps the two locals `s32` instead of m2c's `u8`, and that is what makes cc1 emit
+   the `andi ...,0xFF` before the `sltiu`.  Look for a duplicated load when a draft
+   differs only by "load vs move".
 0r. **A varargs stub is `RET f(s32 arg0, ...) {}`.** GCC emits exactly the four
    `sw $a0..$a3` register-save slots and a `jr $ra` for a body-less variadic
    function, which is the whole body of `func_80014514` and `func_8001452C`.  m2c
