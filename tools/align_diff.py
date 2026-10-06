@@ -32,6 +32,13 @@ from draft_repair import repair as repair_draft  # noqa: E402
 PROLOGUE = '#include "common.h"\n#include "m2c_macros.h"\nvoid *memcpy();\n'
 
 BIN = {"civ2": "CIV2.EXE", "slus": "SLUS_007.92"}
+
+# Every branch spelled by the two dumpers, including the assembler pseudo-forms that
+# `objdump` prints and splat's `beq/ne` spellings with a zero operand.
+BRANCHES = {
+    "beq", "bne", "beqz", "bnez", "bgez", "bgtz", "blez", "bltz", "bgezal", "bltzal",
+    "beql", "bnel", "beqzl", "bnezl", "bgezl", "bgtzl", "blezl", "bltzl", "b", "bal",
+}
 OVRAM = 0x80010000
 
 
@@ -50,8 +57,21 @@ def norm(text):
     t = re.sub(r"^(li)\s+(\w+)\s+(\S+)", r"addiu \2 zero \3", t)
     t = re.sub(r"^(move)\s+(\w+)\s+(\w+)", r"addu \2 \3 zero", t)
     t = re.sub(r"^(jal|j)\b.*", r"\1 T", t)
-    t = re.sub(r"^(beq|bne|bgez|bgtz|blez|bltz|bnez|bgezal|bltzal|beql|bnel|bgezl|bgtzl|blezl|bltzl)\b(.*?)(\S+)$",
-               r"\1\2T", t)
+    # Branch targets are printed differently by the two tools (an offset with a symbol
+    # annotation here, a `.L` label there), so replace the target operand of every
+    # branch with a placeholder -- but keep the operands that are compared, since a
+    # branch on the wrong register is exactly the kind of difference worth seeing.
+    head, _, rest = t.partition(" ")
+    if head in BRANCHES and rest:
+        parts = rest.split(" ")
+        if len(parts) > 1:
+            operands = parts[:-1]
+            # objdump repeats the branch offset before its symbol annotation
+            # (`bnez v0,ac <func+0xac>`); it is not an operand of the encoding.
+            if len(operands) > 1 and re.fullmatch(r"[0-9a-f]+", operands[-1]):
+                operands = operands[:-1]
+            t = head + " " + " ".join(operands) + " T"
+
     # splat prints a split 32-bit constant as `(0xB4000 >> 16)` / `(0xB4000 & 0xFFFF)`
     # where objdump prints the halves, and objdump sign-extends an `addiu` immediate
     # that the retail listing spells as a positive hex constant.  Normalise both.

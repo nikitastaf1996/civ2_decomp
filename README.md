@@ -6,11 +6,11 @@ Both retail PS-X executables on the disc are split, rebuilt from C + assembly, a
 
 | Executable | Role | Retail Size | SHA-1 | Game Functions | PsyQ 4.2 SDK Symbols | Matched C Functions | Total Accounted |
 | :--- | :--- | :---: | :--- | :---: | :---: | :---: | :---: |
-| **`SLUS_007.92`** | Title / Setup / Intro Movie Player | 290,816 B (`0x47000`) | `362a030a231fc5952010909faf848a8a461bbb3c` | 208 | 375 | **92 / 208 (44.2%)** | **467 / 583 (80.1%)** |
-| **`CIV2.EXE`** | Main Strategy Game Engine | 1,351,680 B (`0x14A000`) | `919bad81720f9b0e129fd5f10fb155cd7aa3c98c` | 1,427 | 390 | **756 / 1,427 (53.0%)** | **1,146 / 1,827 (62.7%)** |
-| **Combined** | **Full Game** | **1,642,496 B** | **100% Byte-Identical** | **1,635** | **765** | **848 / 1,635 (51.9%)** | **1,613 / 2,400 (67.2%)** |
+| **`SLUS_007.92`** | Title / Setup / Intro Movie Player | 290,816 B (`0x47000`) | `362a030a231fc5952010909faf848a8a461bbb3c` | 208 | 375 | **93 / 208 (44.7%)** | **468 / 583 (80.3%)** |
+| **`CIV2.EXE`** | Main Strategy Game Engine | 1,351,680 B (`0x14A000`) | `919bad81720f9b0e129fd5f10fb155cd7aa3c98c` | 1,427 | 390 | **757 / 1,427 (53.0%)** | **1,147 / 1,827 (62.8%)** |
+| **Combined** | **Full Game** | **1,642,496 B** | **100% Byte-Identical** | **1,635** | **765** | **850 / 1,635 (52.0%)** | **1,615 / 2,400 (67.3%)** |
 
-*(Note: 831 of the 834 matched C functions are spliced directly into `src/slus/game.c` and `src/civ2/game.c`; 3 `CIV2.EXE` functions — `func_800916F0`, `func_80094298` (jump tables) and `func_8008FADC` (its splat file carries the `D_80011488` data blob, whose migration is described in section 6) — also match 100% but await their `.rodata` migration. Counts are `1,427 - $(grep -c INCLUDE_ASM src/civ2/game.c)` and `208 - $(grep -c INCLUDE_ASM src/slus/game.c)`.)*
+*(Note: 833 of the 836 matched C functions are spliced directly into `src/slus/game.c` and `src/civ2/game.c`; 3 `CIV2.EXE` functions — `func_800916F0`, `func_80094298` (jump tables) and `func_8008FADC` (its splat file carries the `D_80011488` data blob, whose migration is described in section 6) — also match 100% but await their `.rodata` migration. Counts are `1,427 - $(grep -c INCLUDE_ASM src/civ2/game.c)` and `208 - $(grep -c INCLUDE_ASM src/slus/game.c)`.)*
 
 ---
 
@@ -206,6 +206,25 @@ Idioms that have resolved other near-misses (re-apply before rewriting logic):
    where they belong.  Both spellings are three lines apart in the source and the
    difference is invisible in the m2c output, so try the flip before rewriting
    logic.
+0s. **m2c can drop a call's arguments.** `func_800808E4` opens with
+   `func_800983DC(arg0, arg1)` in the retail build, but m2c printed the call with
+   *no* arguments -- it only ever saw `$v0` read, so it inferred an empty parameter
+   list and silently removed the argument setup.  The call sites' `addu $s5,$a0,$zero`
+   / `addu $s4,$a1,$zero` in the retail prologue looked like "save this argument
+   across the call" (they are, because the values are used again in the loop), which
+   is exactly why the draft's instruction sequence was still the right length and
+   the mistake only showed up as a register rotation.  When a near miss differs only
+   in which callee-saved register holds an incoming argument, check whether the
+   draft is passing that argument at all.
+0t. **Widen an assignment to stop cc1 narrowing it.** `func_80029978` is 386
+   instructions and the draft differed in exactly one: retail has
+   `addiu $v0,$v0,0xA0`, the draft `addiu $v0,$v0,-96`.  The value
+   (`field * 0x10 + 0xA0`) is stored through a *byte* pointer, so cc1 narrowed the
+   addition to QImode and re-canonicalised the constant into the signed range --
+   same low byte, different immediate.  Assigning the sum to a declared local first
+   (`temp_v0 = ...; SYM = temp_v0;`) keeps the arithmetic in a wider mode and
+   reproduces `+0xA0`.  Any spelling that hides the narrowing (a cast, a mask, an
+   explicit pointer store) leaves the `-96` fold in place.
 0r. **A varargs stub is `RET f(s32 arg0, ...) {}`.** GCC emits exactly the four
    `sw $a0..$a3` register-save slots and a `jr $ra` for a body-less variadic
    function, which is the whole body of `func_80014514` and `func_8001452C`.  m2c

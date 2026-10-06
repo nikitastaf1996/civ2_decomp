@@ -3102,7 +3102,43 @@ INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_8007F840);
 
 INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_8007F98C);
 
-INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800808E4);
+void func_800808E4(s32 arg0, s32 arg1, s32 arg2) {
+    M2C_UNK func_8002E5E0(s32, s32, s32);
+    s32 func_800983DC__func_800808E4(s32, s32) __asm__("func_800983DC");
+    s32 func_800988E8(s32 arg0, s32 arg1);
+    void func_8009BC2C(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4);
+    s32 func_800CEC5C(s32 arg0);
+    extern s8 D_8011AC24[];
+    extern s8 D_8011AC30[];
+    extern s32 D_8011ACB4;
+    extern s16 D_8011C308;
+    extern s16 D_8011C30A;
+    s32 temp_s0;
+    s32 temp_s1;
+    s32 rst;
+    s32 var_s2;
+    s32 var_v1;
+
+    rst = func_800983DC__func_800808E4(arg0, arg1);
+    var_s2 = 0;
+loop_1:
+    if (var_s2 < 8) {
+        temp_s1 = func_800CEC5C(arg0 + D_8011AC24[var_s2]);
+        temp_s0 = arg1 + D_8011AC30[var_s2];
+        var_v1 = 0;
+        if ((temp_s0 >= 0) && (temp_s0 < D_8011C30A) && (temp_s1 >= 0)) {
+            var_v1 = temp_s1 < D_8011C308;
+        }
+        if ((var_v1 != 0) && (func_800983DC__func_800808E4(temp_s1, temp_s0) == rst) && (func_800988E8(temp_s1, temp_s0) >= 0)) {
+            func_8002E5E0(temp_s1, temp_s0, arg2);
+            if (arg2 == D_8011ACB4) {
+                func_8009BC2C(temp_s1, temp_s0, 0, arg2, 1);
+            }
+        }
+        var_s2 += 1;
+        goto loop_1;
+    }
+}
 
 INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_80080A24);
 
