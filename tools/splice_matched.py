@@ -140,7 +140,7 @@ def splice_binary(binary: str):
 
     defs = {}
     for m in re.finditer(
-        r"^((?:void|s32|u32|s16|u16|s8|u8)\s+)(func_[0-9A-F]{8})\(([^)]*)\)\s*\{?",
+        r"^((?:void|s32|u32|s16|u16|s8|u8)\s*\*?\s+)(func_[0-9A-F]{8})\(([^)]*)\)\s*\{?",
         game_c,
         flags=re.M,
     ):
