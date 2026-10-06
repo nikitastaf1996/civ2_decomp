@@ -5930,7 +5930,26 @@ INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800991C8);
 
 INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800996A4);
 
-INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_80099828);
+/* @CFLAGS: -O1 -G0 */
+
+void func_80099828(arg0, arg1, arg2, arg3, arg4)
+    void *arg0;
+    s32 *arg1;
+    s32 *arg2;
+    s32 arg3;
+    s32 arg4;
+{
+    s32 func_800CEC5C(s32 arg0);
+    s32 temp_s1;
+    s32 temp_v0;
+
+    temp_v0 = func_800CEC5C(arg3 - M2C_FIELD(arg0, s16 *, 0x234));
+    temp_s1 = arg4 - M2C_FIELD(arg0, s16 *, 0x236);
+    *arg1 = M2C_FIELD(arg0, s16 *, 0x258) + ((temp_v0 - 1) * M2C_FIELD(arg0, s16 *, 0x248));
+    *arg2 = M2C_FIELD(arg0, s16 *, 0x25A) + ((temp_s1 - 1) * M2C_FIELD(arg0, s16 *, 0x24A));
+    *arg1 += M2C_FIELD(arg0, s32 *, 0xD4);
+    *arg2 += M2C_FIELD(arg0, s32 *, 0xD8);
+}
 
 INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800998F0);
 
@@ -5957,7 +5976,7 @@ void func_8009AB48(void *arg0, M2C_UNK arg1, M2C_UNK arg2, s32 arg3) {
 
 
 void func_8009ABB8(void *arg0, s32 arg1) {
-    M2C_UNK func_80099828(); /* extern */
+    void func_80099828();
     M2C_UNK func_800AED30(); /* extern */
     extern M2C_UNK D_8010D6B4;
     extern M2C_UNK D_8010D6B6;
@@ -5984,7 +6003,7 @@ INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_8009ADF8);
 
 
 void func_8009B084(s32 arg0, s32 arg1, s32 arg2, s32 arg3) {
-    void func_80099828(s32, s32 *, s32 *, s32, s32);
+    void func_80099828();
     void func_80099AC4(s32, s32, s32, s32, s32, s32, s32, s32, s32);
     s32 var_s0;
     s32 var_s1;
@@ -6404,7 +6423,7 @@ void func_8009EEF0(void *arg0, M2C_UNK arg1, s16 arg2) {
 
 
 s32 func_8009EF4C(void *arg0, s32 arg1, s32 arg2) {
-    M2C_UNK func_80099828(); /* extern */
+    void func_80099828();
     void func_8009EEF0();
     s32 func_800CEBD4();
     extern u16 D_8011A250;
@@ -10246,7 +10265,28 @@ INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800CA9C8);
 
 INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800CAB04);
 
-INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800CAC4C);
+/* @CFLAGS: -O1 -G0 */
+
+s32 func_800CAC4C() {
+    extern u16 D_8011A250;
+    extern M2C_UNK D_8011A374;
+    register s8 *temp_a0 __asm__("$4");
+    s32 var_a1;
+    s32 var_v0;
+
+    var_v0 = 0;
+    if (D_8011A250 & 0x80) {
+        return var_v0;
+    }
+    temp_a0 = (s8 *) &D_8011A374;
+    var_a1 = 0;
+    if (M2C_FIELD(temp_a0, s16 *, 0) != -1) {
+        var_a1 = 1;
+    } else if ((M2C_FIELD(temp_a0, s8 *, -0x43) & M2C_FIELD(temp_a0, u8 *, -0xFF)) != 0) {
+        var_a1 = 1;
+    }
+    return var_a1;
+}
 
 INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800CACA4);
 

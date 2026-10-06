@@ -594,11 +594,35 @@ void func_8001B648() {
     func_8001B608(&D_801252E8, 0x80);
 }
 
-INCLUDE_ASM("asm/us/slus/nonmatchings/game", func_8001B6C0);
+/* @CFLAGS: -O1 -G0 */
+void func_8001B6C0(arg0, arg1, arg2, arg3)
+    s32 arg0;
+    s32 arg1;
+    s32 arg2;
+    s32 arg3;
+{
+    M2C_UNK SsVoKeyOn(s32, s32, s32, s32);
+    M2C_UNK SsVoKeyOff(M2C_UNK);
+    register s32 var_s3 __asm__("$19");
+    register s32 var_s0 __asm__("$16");
+    register s32 var_s1 __asm__("$17");
+    register s32 var_s2 __asm__("$18");
+
+    var_s3 = arg0;
+    var_s0 = arg1;
+    var_s1 = arg2;
+    var_s2 = arg3;
+    if (var_s3 == 0x100) {
+        if (var_s0 != 0x1B00) {
+            SsVoKeyOff(0x100);
+        }
+    }
+    SsVoKeyOn(var_s3, var_s0, var_s1 & 0xFFFF, var_s2 & 0xFFFF);
+}
 
 
 void func_8001B738(s32 arg0) {
-    M2C_UNK func_8001B6C0(); /* extern */
+    void func_8001B6C0();
     extern M2C_UNK D_80016B18;
     extern M2C_UNK D_80016B1C;
     extern M2C_UNK D_80016B20;
@@ -611,7 +635,7 @@ void func_8001B738(s32 arg0) {
 
 
 void func_8001B794(s32 arg0) {
-    M2C_UNK func_8001B6C0(); /* extern */
+    void func_8001B6C0();
     extern M2C_UNK D_80016BB4;
     extern M2C_UNK D_80016BB8;
     extern M2C_UNK D_80016BBC;

@@ -6,9 +6,9 @@ Both retail PS-X executables on the disc are split, rebuilt from C + assembly, a
 
 | Executable | Role | Retail Size | SHA-1 | Game Functions | PsyQ 4.2 SDK Symbols | Matched C Functions | Total Accounted |
 | :--- | :--- | :---: | :--- | :---: | :---: | :---: | :---: |
-| **`SLUS_007.92`** | Title / Setup / Intro Movie Player | 290,816 B (`0x47000`) | `362a030a231fc5952010909faf848a8a461bbb3c` | 208 | 375 | **93 / 208 (44.7%)** | **468 / 583 (80.3%)** |
-| **`CIV2.EXE`** | Main Strategy Game Engine | 1,351,680 B (`0x14A000`) | `919bad81720f9b0e129fd5f10fb155cd7aa3c98c` | 1,427 | 390 | **771 / 1,427 (54.0%)** | **1,161 / 1,827 (63.6%)** |
-| **Combined** | **Full Game** | **1,642,496 B** | **100% Byte-Identical** | **1,635** | **765** | **864 / 1,635 (52.9%)** | **1,629 / 2,400 (67.9%)** |
+| **`SLUS_007.92`** | Title / Setup / Intro Movie Player | 290,816 B (`0x47000`) | `362a030a231fc5952010909faf848a8a461bbb3c` | 208 | 375 | **94 / 208 (45.2%)** | **469 / 583 (80.4%)** |
+| **`CIV2.EXE`** | Main Strategy Game Engine | 1,351,680 B (`0x14A000`) | `919bad81720f9b0e129fd5f10fb155cd7aa3c98c` | 1,427 | 390 | **773 / 1,427 (54.2%)** | **1,163 / 1,827 (63.7%)** |
+| **Combined** | **Full Game** | **1,642,496 B** | **100% Byte-Identical** | **1,635** | **765** | **865 / 1,635 (52.9%)** | **1,630 / 2,400 (67.9%)** |
 
 *(Note: every matched C function is now spliced directly into `src/slus/game.c` and
 `src/civ2/game.c` — including the last three holdouts, whose `.rodata` (a `"+"` string blob
@@ -80,7 +80,7 @@ caches, twelve flag sets, `--near 40`):
 | `func_80095A10` | 8 | `-O1 -G8` | A 28-byte copy loop. The retail build keeps the *high half* of `&D_801A0000` in `$a1` and folds the low half into every load and into `addiu $a1,$a1,%lo(SYM+1)`; every pointer spelling tried so far makes cc1 materialise the full address with a second `addiu` |
 | `func_80070600` | 9 | `-O1 -G8` | -- |
 | `func_800DE1C8` | 9 | `-O1 -G8` | The `lui/addiu` of `func_800DE830` and the 0x138-byte frame match; the tail `jal` sequence does not |
-| `func_80089BA4` | 10 | `-O1 -G8` | Retail materialises `%hi/%lo(D_80113F08)` into `$v0` *before* loading `0x10($sp)` and adds into `$v1`; the draft does it the other way round (idiom 0k / `addrfirst` territory) |
+| `func_80089BA4` | 4 | `-O1 -G0` | Realigned: 53/53 instructions, the whole diff is `la $v1,D_80113F08` / `lw $a0,0x10($sp)` / `addu` / `addu` (retail) vs `lw $3` / `la $4` / `addu $3,$3,$4` / `addu $2,$2,$3` (draft) -- cc1 reassociates the pointer sum to `chain + (sp10 + base)`.  Six spellings (`(s32)` casts, two-statement splits, named base, array form) all keep the draft's tree; needs a different idea |
 | `func_800CEAA8` | 10 | `-O2 -G8` | -- |
 | `func_800CEE08` | 10 | `-O2 -G8 -fno-delayed-branch` | Two `abs`-style halves; the draft branches on the copy of `$a1` where retail branches on `$a1` itself and leaves the copy in the delay slot |
 | `func_800B4560` | 5 | `-O1 -G8` | **matched** -- see idiom 0q: m2c's `if (x != 1) { return A; } return B;` has to be inverted to `if (x == 1) { return B; } return A;` |
@@ -281,6 +281,37 @@ Idioms that have resolved other near-misses (re-apply before rewriting logic):
    `func_800D8A1C` also shows the matching hoist: the loop-invariant
    `var_s1 = &D_80122C38;` has to be written as a local before the loop, because
    `-O1` does not lift the address out of the loop on its own.
+0y. **A register the allocator refuses to pick can be *pinned*.** cc1 assigns
+   local pseudos by use-count priority, not by name, so a draft that is
+   instruction-for-instruction identical except for *which* register holds a local
+   can be unfixable by reordering the source.  The escape hatch is a pinned local:
+
+   ```c
+   void func_8001B6C0(s32 arg0, s32 arg1, s32 arg2, s32 arg3) {
+       register s32 var_s3 __asm__("$19");   /* $s3 */
+       register s32 var_s0 __asm__("$16");   /* $s0 */
+       ...
+       var_s3 = arg0;                        /* -> addu $s3, $a0, $zero */
+   ```
+
+   The first *source* assignment of `x` lands in the pinned register; later uses
+   only stay there while they are simple (a `x *= 2` re-loads the allocator's own
+   register -- see idiom 0m and the eight failed `func_800146C8` variants).  Two
+   matches came from this: `func_8001B6C0` (four pinned copies, plus the callee
+   prototypes moved *inside* the body to dodge a clashing external declaration) and
+   `func_800CAC4C`, where pinning only the struct base
+   (`register s8 *temp_a0 __asm__("$4");`) was enough to swap the pointer and the
+   return accumulator into retail's `$a0` / `$a1`.
+0z. **A hoisted subexpression is a named local.** `func_80099828` is 50
+   instructions and the draft differed in exactly one window: retail emits
+   `lh $v1,0x236($s0); nop; subu $s1,$s1,$v1` *between* the `jal` and the rest of
+   the first statement, i.e. `arg4 - field_0x236` is computed before it is used.
+   Splitting the single-expression draft into
+   `temp_v0 = func_800CEC5C(arg3 - field_0x234); temp_s1 = arg4 - field_0x236;`
+   and then using the two temps reproduces retail's order exactly -- `-O1` does not
+   hoist the load on its own, but it does keep a source-level temp where the source
+   puts it.
+
 0r. **A varargs stub is `RET f(s32 arg0, ...) {}`.** GCC emits exactly the four
    `sw $a0..$a3` register-save slots and a `jr $ra` for a body-less variadic
    function, which is the whole body of `func_80014514` and `func_8001452C`.  m2c
