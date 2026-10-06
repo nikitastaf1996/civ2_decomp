@@ -7933,7 +7933,23 @@ INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800AF6E0);
 
 INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800B005C);
 
-INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800B072C);
+/* @CFLAGS: -O1 -G0 */
+
+void func_800B072C(s32 arg0, s32 arg1) {
+    extern s8 D_80117A8D[];
+    s32 temp_a2;
+    s8 temp_v0;
+    s8 var_v0;
+
+    temp_a2 = (arg1 * 6) + (arg0 * 0x578);
+    temp_v0 = D_80117A8D[temp_a2];
+    if (temp_v0 > 0) {
+        var_v0 = -temp_v0;
+    } else {
+        var_v0 = (s8) D_80117A8D[((arg0 * 0x578) + (arg1 * 6))];
+    }
+    D_80117A8D[temp_a2] = var_v0;
+}
 
 INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800B07CC);
 
@@ -7949,7 +7965,7 @@ INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800B0F04);
 
 
 void func_800B1100(s32 arg0) {
-    M2C_UNK func_800B072C(s32, s32);                    /* extern */
+    void func_800B072C();
     M2C_UNK func_800B0B94(s32, s16, s16, s8, s32);      /* extern */
     extern s8 D_80117A8C[];
     extern s8 D_80117A8D[];
@@ -11045,7 +11061,45 @@ void func_800D89FC() {
     func_800D07A0();
 }
 
-INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800D8A1C);
+/* @CFLAGS: -O1 -G0 */
+
+void func_800D8A1C(void *arg0) {
+    s32 func_800D7D74();
+    M2C_UNK func_800F82A4(void *, M2C_UNK, M2C_UNK);    /* extern */
+    M2C_UNK func_800FA9F0(s32);                         /* extern */
+    M2C_UNK func_80104794(s32);                         /* extern */
+    extern M2C_UNK D_80122C38;
+    s32 temp_a0;
+    s32 var_s0;
+    s32 var_s0_2;
+    s32 var_v0;
+    void *temp_s1;
+    void *var_s1;
+
+    var_s0 = 0;
+
+    do {
+        temp_s1 = (var_s0 * 4) + (s32) arg0;
+        temp_a0 = M2C_FIELD(temp_s1, s32 *, 0xFC0);
+        if (temp_a0 != 0) {
+            func_80104794(temp_a0);
+            M2C_FIELD(temp_s1, s32 *, 0xFC0) = 0;
+        }
+        var_s0 += 1;
+
+    } while (var_s0 < 0xA);
+    var_s0_2 = 0;
+    var_s1 = &D_80122C38;
+loop_5:
+    if (var_s0_2 < 4) {
+        func_800F82A4((s32) ((var_s0_2 * 0x94) + (s32) var_s1), 0, 0);
+        var_s0_2 += 1;
+        goto loop_5;
+    }
+    func_800FA9F0(arg0 + 0x2C);
+    func_800F82A4(arg0, 0, 0);
+    func_800D7D74();
+}
 
 INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800D8AE8);
 

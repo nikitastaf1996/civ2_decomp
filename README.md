@@ -7,10 +7,10 @@ Both retail PS-X executables on the disc are split, rebuilt from C + assembly, a
 | Executable | Role | Retail Size | SHA-1 | Game Functions | PsyQ 4.2 SDK Symbols | Matched C Functions | Total Accounted |
 | :--- | :--- | :---: | :--- | :---: | :---: | :---: | :---: |
 | **`SLUS_007.92`** | Title / Setup / Intro Movie Player | 290,816 B (`0x47000`) | `362a030a231fc5952010909faf848a8a461bbb3c` | 208 | 375 | **93 / 208 (44.7%)** | **468 / 583 (80.3%)** |
-| **`CIV2.EXE`** | Main Strategy Game Engine | 1,351,680 B (`0x14A000`) | `919bad81720f9b0e129fd5f10fb155cd7aa3c98c` | 1,427 | 390 | **762 / 1,427 (53.4%)** | **1,152 / 1,827 (63.1%)** |
-| **Combined** | **Full Game** | **1,642,496 B** | **100% Byte-Identical** | **1,635** | **765** | **855 / 1,635 (52.3%)** | **1,620 / 2,400 (67.5%)** |
+| **`CIV2.EXE`** | Main Strategy Game Engine | 1,351,680 B (`0x14A000`) | `919bad81720f9b0e129fd5f10fb155cd7aa3c98c` | 1,427 | 390 | **764 / 1,427 (53.5%)** | **1,154 / 1,827 (63.2%)** |
+| **Combined** | **Full Game** | **1,642,496 B** | **100% Byte-Identical** | **1,635** | **765** | **857 / 1,635 (52.4%)** | **1,622 / 2,400 (67.6%)** |
 
-*(Note: 838 of the 841 matched C functions are spliced directly into `src/slus/game.c` and `src/civ2/game.c`; 3 `CIV2.EXE` functions — `func_800916F0`, `func_80094298` (jump tables) and `func_8008FADC` (its splat file carries the `D_80011488` data blob, whose migration is described in section 6) — also match 100% but await their `.rodata` migration. Counts are `1,427 - $(grep -c INCLUDE_ASM src/civ2/game.c)` and `208 - $(grep -c INCLUDE_ASM src/slus/game.c)`.)*
+*(Note: 840 of the 843 matched C functions are spliced directly into `src/slus/game.c` and `src/civ2/game.c`; 3 `CIV2.EXE` functions — `func_800916F0`, `func_80094298` (jump tables) and `func_8008FADC` (its splat file carries the `D_80011488` data blob, whose migration is described in section 6) — also match 100% but await their `.rodata` migration. Counts are `1,427 - $(grep -c INCLUDE_ASM src/civ2/game.c)` and `208 - $(grep -c INCLUDE_ASM src/slus/game.c)`.)*
 
 ---
 
@@ -263,6 +263,20 @@ Idioms that have resolved other near-misses (re-apply before rewriting logic):
      after the *address* it saw (`addiu $a0,$sp,0x118`), but the frame is only
      explained by a 0x110-byte buffer based at `$sp+0x18` of which the passed
      address is a sub-object -- `u8 sp118[0x110];` plus `&sp118[0x100]`.
+0x. **Commutative operands are not normalised.** `addu $a0,$a0,$s1` and
+   `addu $a0,$s1,$a0` are the same value but different opcodes, and cc1 picks the
+   order from the source.  Two near misses this batch turned on it:
+   `func_800B072C` matched only after the else-branch index was written
+   `(arg0 * 0x578) + (arg1 * 6)` (the earlier statement keeps `(arg1 * 6) + ...`),
+   and `func_800D8A1C` needed `(var_s0 * 4) + (s32) arg0` for one sum and
+   `(s32) ((var_s0_2 * 0x94) + (s32) var_s1)` for the other -- the `(s32)` cast is
+   what stops cc1 from quietly rewriting the operand order.  When a candidate and
+   the target agree instruction-for-instruction except for the *order of two
+   registers* in an `addu`, swap the source operands (a cast is often needed to make
+   the swap stick).
+   `func_800D8A1C` also shows the matching hoist: the loop-invariant
+   `var_s1 = &D_80122C38;` has to be written as a local before the loop, because
+   `-O1` does not lift the address out of the loop on its own.
 0r. **A varargs stub is `RET f(s32 arg0, ...) {}`.** GCC emits exactly the four
    `sw $a0..$a3` register-save slots and a `jr $ra` for a body-less variadic
    function, which is the whole body of `func_80014514` and `func_8001452C`.  m2c
