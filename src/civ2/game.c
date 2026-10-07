@@ -3560,7 +3560,22 @@ s32 func_80089B20(s32 arg0, s32 arg1) {
     return var_v1;
 }
 
-INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_80089BA4);
+void func_80089BA4(s32 arg0, s32 arg1, s32 arg2) {
+    void func_800CEF1C__func_80089BA4() __asm__("func_800CEF1C");
+    typedef struct { u8 bits[0x58]; } CityBldgs;
+    extern CityBldgs D_80113F08[];
+    s32 sp10;
+    u8 sp14;
+
+    if ((u32)(arg1 - 1) < 0x22U) {
+        func_800CEF1C__func_80089BA4(arg1, &sp10, &sp14);
+        if (arg2 != 0) {
+            D_80113F08[arg0].bits[sp10] |= sp14;
+            return;
+        }
+        D_80113F08[arg0].bits[sp10] &= ~sp14;
+    }
+}
 
 
 /* Small table scan: a while loop with an early 'return 1' beats the flag-variable
@@ -11911,7 +11926,24 @@ INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800DCF0C);
 
 INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800DD264);
 
-INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800DD590);
+void func_800DD590(s32 arg0, s32 arg1, s32 arg2) {
+    typedef struct { s32 rel[0x15E]; } CivRelT;
+    extern CivRelT D_801176B4[];
+    s32 var_s2;
+
+    var_s2 = arg2;
+    if (var_s2 & 4) {
+        func_800DD590(arg0, arg1, 8);
+    }
+    if (var_s2 & 0x2000) {
+        func_800DD590(arg0, arg1, 0x1800);
+    }
+    if (var_s2 & 1) {
+        func_800DD590(arg0, arg1, 0x2000);
+    }
+    D_801176B4[arg0].rel[arg1] &= ~var_s2;
+    D_801176B4[arg1].rel[arg0] &= ~var_s2;
+}
 
 void func_800DD688(s32 arg0, s32 arg1, s32 arg2) {
     typedef struct { s32 rel[0x15E]; } CivRelT;

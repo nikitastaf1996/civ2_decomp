@@ -42,14 +42,65 @@ print(f"    {total} sectors")
 PY
 
 echo "==> extracting SLUS_007.92 and CIV2.EXE"
+rm -f "$OUT/SLUS_007.92" "$OUT/CIV2.EXE"
 if command -v 7z >/dev/null; then
-    ( cd "$OUT" && 7z e -y "$iso" "SLUS_007.92" "CIV2.EXE" >/dev/null )
-elif command -v isoinfo >/dev/null; then
-    ( cd "$OUT" && isoinfo -i "$iso" -x "/SLUS_007.92;1" > SLUS_007.92 \
-                && isoinfo -i "$iso" -x "/CIV2.EXE;1" > CIV2.EXE )
-else
-    echo "    !! need 7z (p7zip-full) or isoinfo (genisoimage)" >&2
-    exit 2
+    # 7z refuses this disc: the PVD's VolumeSpaceSize covers the whole CD
+    # (215,324 sectors) while the track holds the data track's 205,798, so it
+    # reports "Unexpected end of archive" and extracts nothing.  Its exit status
+    # is checked by the caller-side verification below, not here.
+    ( cd "$OUT" && 7z e -y "$iso" "SLUS_007.92" "CIV2.EXE" >/dev/null 2>&1 ) || true
+fi
+
+if [ ! -s "$OUT/SLUS_007.92" ] || [ ! -s "$OUT/CIV2.EXE" ]; then
+    echo "    (7z could not read the image; walking the ISO 9660 directory tree directly)"
+    python3 - "$iso" "$OUT" <<'PY'
+import os, struct, sys
+
+iso, out = sys.argv[1], sys.argv[2]
+f = open(iso, "rb")
+
+def sector(n, count=1):
+    f.seek(n * 2048)
+    return f.read(2048 * count)
+
+def rec_u32(rec, off):
+    return struct.unpack("<I", rec[off:off + 4])[0]
+
+def find(extent, size, want, path="/"):
+    """Depth-first walk of the ISO 9660 directory records."""
+    data = sector(extent, (size + 2047) // 2048)
+    off = 0
+    while off < size:
+        rlen = data[off]
+        if rlen == 0:                      # padding to the next sector
+            off = (off // 2048 + 1) * 2048
+            continue
+        rec = data[off:off + rlen]
+        name = rec[33:33 + rec[32]].decode("latin1").split(";")[0]
+        child_ext, child_size, flags = rec_u32(rec, 2), rec_u32(rec, 10), rec[25]
+        if name not in (".", ".."):
+            full = path + name
+            if flags & 2:
+                if find(child_ext, child_size, want, full + "/"):
+                    return True
+            elif full.lstrip("/").upper() in want:
+                f.seek(child_ext * 2048)
+                blob = f.read(child_size)
+                open(os.path.join(out, full.lstrip("/")), "wb").write(blob)
+                print(f"    {full} -> {len(blob)} bytes")
+                want.discard(full.lstrip("/").upper())
+                if not want:
+                    return True
+        off += rlen
+    return False
+
+pvd = sector(16)
+if pvd[0] != 1:
+    sys.exit("no primary volume descriptor at sector 16")
+root = pvd[156:156 + 34]
+if not find(rec_u32(root, 2), rec_u32(root, 10), {"SLUS_007.92", "CIV2.EXE"}):
+    sys.exit("SLUS_007.92 / CIV2.EXE not found in the image")
+PY
 fi
 rm -f "$iso"
 

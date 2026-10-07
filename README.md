@@ -424,9 +424,31 @@ without the `-G8` small-data threshold that the rest of the file uses.
 
 ### 5b. Restoring a Build Environment from Scratch
 
-Only the decompilation sources are tracked; the compiler, the disc and the generated linker scripts are not. `tools/restore_env.sh` performs the whole restoration in one command on a fresh machine (or after a sandbox reset): it installs GCC 2.7.2 PSX + binutils + p7zip + the Python packages, generates the splat linker scripts, downloads the retail disc zip (handling Google Drive's interposition page), extracts `SLUS_007.92` / `CIV2.EXE` and verifies them against `config/us/*.sha1`, then re-applies `tools/splice_matched.py` so `src/*/game.c` is in its spliced state. Pass `ROM=/path/to/disc.cue` to skip the download.
+Only the decompilation sources are tracked; the compiler, the disc and the generated linker scripts are not. `tools/restore_env.sh` performs the whole restoration in one command on a fresh machine (or after a sandbox reset): it installs GCC 2.7.2 PSX + binutils + p7zip + the Python packages, generates the splat linker scripts, downloads the retail disc zip (handling Google Drive's interposition page), extracts `SLUS_007.92` / `CIV2.EXE` and verifies them against `config/us/*.sha1`, then re-applies `tools/splice_matched.py` so `src/*/game.c` is in its spliced state. Pass `ROM=/path/to/disc.cue` to skip the download; the image is unpacked into `${WORK:-/var/tmp/rom}` so that the ~460 MB track never lands inside the repository tree.
+
+`tools/extract_disc.sh` converts track 1 from raw 2352-byte sectors to 2048-byte
+sectors and then reads the two executables straight out of the ISO 9660 directory
+tree with a small Python walker. That walker is not a fallback for convenience:
+the disc's primary volume descriptor claims a `VolumeSpaceSize` of 215,324 sectors
+(the whole CD, audio track included) while the data track only holds 205,798, so
+`7z` reports `Unexpected end of archive` and extracts nothing at all. The script
+still tries `7z` first and only walks the tree when the files did not appear.
 
 ### 6. Automated Matching Pipeline
+
+A hand-matched function is not spliced out of `/tmp/matched_<bin>.pkl`: that pickle is
+scratch (every sweep rewrites it) and it disappears whenever /tmp is wiped, so
+hand-matches are recorded in **`/home/user/bank.json`** — a workspace-backed store that
+`tools/splice_matched.py` reads *before* the pickle.  A function gets into the bank only
+through `tools/bank_add.py`, which runs `tools/try_match.py` over the draft itself and
+refuses to record anything that is not byte-for-byte identical:
+
+```bash
+python3 tools/bank_add.py draft.c func_800DD590 --opt "-O1 -G8"   # verify + record
+python3 tools/bank_add.py --list                                  # what is banked
+python3 tools/bank_add.py --check                                 # re-verify every entry
+python3 tools/splice_matched.py && make -j2 && make compare
+```
 
 The end-to-end sweep is three stages, all re-runnable:
 

@@ -24,7 +24,11 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ROM="${1:-${ROM:-}}"
 ROM_URL="${ROM_URL:-https://drive.google.com/uc?export=download&id=1RxmKZZ8i3mLjwSw9dpv6BOmtEa0jg9ML}"
-WORK="${WORK:-/home/user/rom}"
+# Keep the disc image *outside* the repository tree: it is ~460 MB, which dwarfs
+# the sources and (in a sandbox whose workspace is snapshotted) can push the
+# snapshot over its size budget.  Only the two extracted 1.6 MB executables
+# actually need to live next to the build.
+WORK="${WORK:-/var/tmp/rom}"
 
 echo "==> toolchain (cc1, binutils, python packages, linker scripts)"
 "$ROOT/tools/setup_toolchain.sh"
