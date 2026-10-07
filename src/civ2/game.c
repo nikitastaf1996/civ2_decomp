@@ -9555,7 +9555,53 @@ void *func_800B9350(void *arg0) {
     return arg0;
 }
 
-INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800B94A4);
+/* @CFLAGS: -O1 -G8 -fschedule-insns -fschedule-insns2 */
+void func_800B94A4(void *arg0) {
+    void func_80092B1C(s32 arg0);
+    void func_8009D158();
+    M2C_UNK func_800F7364(void *);
+    M2C_UNK func_800F82A4(void *, M2C_UNK, M2C_UNK);
+    M2C_UNK func_80104794(s32);
+    M2C_UNK func_80107404(s16 *, M2C_UNK, M2C_UNK, M2C_UNK, void *);
+    M2C_UNK func_80107ACC();
+    s32 func_80107C38(M2C_UNK, M2C_UNK);
+    extern s32 D_8011E748;
+    extern s32 D_8015877C;
+    s16 sp18[4];
+    s32 temp_a0;
+    s32 var_s1;
+    void *temp_s0;
+    void *var_s0;
+
+    var_s1 = 0;
+    var_s0 = arg0;
+    do {
+        temp_a0 = M2C_FIELD(var_s0, s32 *, 0x388);
+        if (temp_a0 != 0) {
+            func_80104794(temp_a0);
+            M2C_FIELD(var_s0, s32 *, 0x388) = 0;
+        }
+        var_s1 += 1;
+        var_s0 += 4;
+    } while (var_s1 < 0xA);
+    if (M2C_FIELD(arg0, s32 *, 0x334) >= 0) {
+        M2C_FIELD(arg0, s32 *, 0x334) = -1;
+        func_800F7364(arg0 + 0x2C);
+        func_80092B1C(arg0);
+        if ((D_8011E748 == 0) && (D_8015877C != 0)) {
+            D_8011E748 = func_80107C38(0x140, 0xF0);
+            func_8009D158();
+        }
+        sp18[2] = 0x140;
+        temp_s0 = arg0 + 0x228;
+        sp18[0] = 0;
+        sp18[1] = 0;
+        sp18[3] = 0xF0;
+        func_80107404(sp18, 0, 0x78, 0x3E8, temp_s0);
+        func_80107ACC();
+        func_800F82A4(temp_s0, 0, 0);
+    }
+}
 
 INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800B95BC);
 
@@ -9855,7 +9901,7 @@ INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800C4A48);
 /* @CFLAGS: -O2 -G0 */
 
 void func_800C4F1C(s32 arg0) {
-    M2C_UNK func_800B94A4(M2C_UNK *);                   /* extern */
+    void func_800B94A4();
     M2C_UNK func_800B95BC(M2C_UNK *, M2C_UNK, M2C_UNK, M2C_UNK, s32, s32, s32, s32); /* extern */
     M2C_UNK func_800B9940(M2C_UNK *);                   /* extern */
     M2C_UNK func_800F7850(void *);                      /* extern */
