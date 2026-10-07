@@ -311,6 +311,38 @@ Idioms that have resolved other near-misses (re-apply before rewriting logic):
    and then using the two temps reproduces retail's order exactly -- `-O1` does not
    hoist the load on its own, but it does keep a source-level temp where the source
    puts it.
+0aa. **A struct type has to be bigger than the window you touch.** cc1 keeps a
+   global's address in a general register only while it is worth it, and "worth it"
+   depends on the size of the *type*, not on how many members you assign.  Typing
+   `D_8011FADC` as `{ s32 unk0; s32 unk4; }` (8 bytes) makes every
+   `D_8011FADC.unkN = 0;` fold to its own `lui $at / sw $zero, %lo(SYM+N)($at)`
+   pair -- even when the same statement sequence also needs `&D_8011FADC` for a
+   pointer subtraction.  Padding the struct out (`{ s32 unk0; s32 unk4;
+   s8 pad[0x44]; }`) flips cc1 to the retail shape: one `lui/addiu` base, then
+   `sw $zero, 0x0($v0)` and `sw $zero, 0x4($v0)` through it, then the base is
+   reused for `addiu $v0,$v0,-0x44`.  So when retail reuses one base for several
+   adjacent member stores and the draft re-materialises the address, *grow the
+   struct* before trying to hand-manage a pointer local -- with a small type no
+   pointer spelling helps (a `p = &D; p[0]=0; p[1]=0;` local folds both stores
+   identically, and only the first store of an array-based `s8 *p = D;` keeps the
+   register).
+0ab. **A parameter that cc1 promoted to a callee-saved register can be dragged back
+   into its incoming `$aN`.** Two faces of the same effect:
+   - `func_800B8AD0`: the early-exit path returns `arg2`, which lives in a
+     call-saved register because it is live across calls.  cc1 only hands the
+     result back in that register when *the parameter itself is reassigned*
+     (`arg2 = func_800B7D48(...); return arg2;`).  A dedicated `res` local --
+     initialised or not -- gets a fresh `$s7` and grows the frame by two words.
+   - `func_800A83F0`: the tail block tests, stores and passes `arg1` four times and
+     retail does all of it through `$a1`, with `addu $a1,$s1,$zero` sitting in the
+     delay slot of the `beqz $s1` that guards the block.  Naming `arg1` directly
+     keeps `$s1` everywhere; writing `var_a1 = arg1;` as the *first statement of
+     the block* makes cc1 copy it into `$a1` (dbr_schedule then lifts that copy
+     into the branch delay slot) and every later use of `var_a1` in the block --
+     the `blez`, both stores, and the outgoing call argument -- reads `$a1`.
+   General rule: the register a value ends up in follows the *source variable*,
+   so reassigning a parameter (or introducing a local for it) is the lever when a
+   block's register choice disagrees with the rest of the function.
 
 0r. **A varargs stub is `RET f(s32 arg0, ...) {}`.** GCC emits exactly the four
    `sw $a0..$a3` register-save slots and a `jr $ra` for a body-less variadic
