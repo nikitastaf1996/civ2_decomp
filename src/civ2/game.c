@@ -487,7 +487,34 @@ INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_8001E0E4);
 
 INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_8001E7E8);
 
-INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_8001E8B0);
+void func_8001E8B0(void *arg0, M2C_UNK arg1) {
+    void *memcpy();
+    void func_80092B5C(void *arg0, M2C_UNK arg1);
+    void func_8009750C__func_8001E8B0(s32) __asm__("func_8009750C");
+    M2C_UNK func_800F6354(void *, M2C_UNK);             /* extern */
+    M2C_UNK func_800F686C(void *, M2C_UNK);             /* extern */
+    M2C_UNK func_800F8530(void *, M2C_UNK);             /* extern */
+    extern M2C_UNK D_80010154;
+    register M2C_UNK var_s0 __asm__("$16");
+    register M2C_UNK var_s1 __asm__("$17");
+    register M2C_UNK var_s2 __asm__("$18");
+    s32 temp_a0;
+    var_s0 = arg0;
+    var_s2 = arg1;
+    M2C_FIELD(var_s0, M2C_UNK **, 0x28) = &D_80010154;
+    temp_a0 = M2C_FIELD(var_s0, s32 *, 0x318);
+    var_s1 = var_s0 + 0x304;
+    if (temp_a0 != 0) {
+        func_8009750C__func_8001E8B0(temp_a0);
+    }
+    func_800F6354(var_s1, 2);
+    func_800F686C(var_s0 + 0x2D8, 2);
+    func_800F686C(var_s0 + 0x2AC, 2);
+    func_800F686C(var_s0 + 0x280, 2);
+    func_800F686C(var_s0 + 0x254, 2);
+    func_800F8530(var_s0 + 0x228, 2);
+    func_80092B5C(var_s0, var_s2);
+}
 
 
 void func_8001E960() {
@@ -7823,7 +7850,7 @@ INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800A3494);
 
 void func_800A3650() {
     M2C_UNK func_800A392C(); /* extern */
-    M2C_UNK func_800A3B08(); /* extern */
+    void func_800A3B08();
     void func_800A7EB8();
     extern s32 D_80158A90;
     extern u8 D_80158A94;
@@ -7973,7 +8000,31 @@ void func_800A3AA4(s32 arg0) {
     func_800A74AC(D_80158A98, 1, 0, (void *)&func_800A348C);
 }
 
-INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800A3B08);
+void func_800A3B08(s32 arg0) {
+    void *memcpy();
+    void func_800B1294(s32 arg0);
+    void func_800B12A0(s16 arg0, s16 arg1);
+    M2C_UNK func_800F82A4(s32, M2C_UNK, M2C_UNK);       /* extern */
+    M2C_UNK func_800FA9F0(s32);                         /* extern */
+    M2C_UNK func_800FABBC(s32);                         /* extern */
+    M2C_UNK func_80104AFC();                            /* extern */
+    register M2C_UNK var_s0 __asm__("$16");
+    register M2C_UNK var_s1 __asm__("$17");
+    register M2C_UNK var_s2 __asm__("$18");
+    var_s0 = arg0;
+    var_s2 = var_s0 + 0x8C;
+    var_s1 = var_s0 + 0xB8;
+    func_800FABBC(var_s1);
+    func_80104AFC();
+    func_800FABBC(var_s0);
+    func_80104AFC();
+    func_800FA9F0(var_s0);
+    func_800B1294(0);
+    func_800FA9F0(var_s1);
+    func_800F82A4(var_s2, 0, 0);
+    func_800FA9F0(var_s0);
+    func_800B12A0(0, 0);
+}
 
 s32 func_800A3BA0() {
     return 1;

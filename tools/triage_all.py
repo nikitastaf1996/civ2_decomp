@@ -21,6 +21,11 @@ import sys
 from concurrent.futures import ThreadPoolExecutor
 
 D = "/home/user/civ2_decomp"
+
+
+def tri_dir(binary):
+    """civ2 keeps the historical /tmp/tri; other binaries get their own dir."""
+    return "/tmp/tri" if binary == "civ2" else f"/tmp/tri_{binary}"
 sys.path.insert(0, os.path.join(D, "tools"))
 from m2c_postprocess import enhance_c  # noqa: E402
 from draft_repair import repair as repair_draft  # noqa: E402
@@ -47,7 +52,8 @@ def callers(binary):
 
 
 def build_drafts(binary):
-    os.makedirs("/tmp/tri", exist_ok=True)
+    d = tri_dir(binary)
+    os.makedirs(d, exist_ok=True)
     cache = pickle.load(open(f"/tmp/m2c_cache_{binary}.pkl", "rb"))
     todo = set(unmatched(binary))
     n_raw = 0
@@ -65,17 +71,17 @@ def build_drafts(binary):
             enhanced = open(hand).read()
         if '#include "common.h"' not in enhanced:
             enhanced = '#include "common.h"\n#include "m2c_macros.h"\nvoid *memcpy();\n' + enhanced
-        open(f"/tmp/tri/{name}.c", "w").write(enhanced)
+        open(f"{d}/{name}.c", "w").write(enhanced)
         n_raw += 1
     print(f"[{binary}] drafts written: {n_raw} (hand drafts override where present)",
           flush=True)
 
 
 def score(args):
-    fn, opt = args
+    fn, opt, binary = args
     p = subprocess.run(
-        ["python3", f"{D}/tools/try_match.py", f"/tmp/tri/{fn}.c", fn,
-         "--bin", "civ2", "--opt", opt],
+        ["python3", f"{D}/tools/try_match.py", f"{tri_dir(binary)}/{fn}.c", fn,
+         "--bin", binary, "--opt", opt],
         capture_output=True, text=True, cwd=D)
     out = (p.stdout or "") + (p.stderr or "")
     if re.search(r"\bMATCH\b", out):
@@ -96,17 +102,18 @@ def main():
     opts = a.opt or ["-O1 -G8"]
     build_drafts(a.bin)
     cnt = callers(a.bin)
-    todo = sorted(os.path.basename(p)[:-2] for p in glob.glob("/tmp/tri/*.c"))
+    todo = sorted(os.path.basename(p)[:-2] for p in glob.glob(f"{tri_dir(a.bin)}/*.c"))
     if a.limit:
         todo = todo[:a.limit]
     for opt in opts:
         tag = re.sub(r"[^A-Za-z0-9]+", "_", opt).strip("_")
         with ThreadPoolExecutor(max_workers=a.jobs) as ex:
-            res = list(ex.map(score, [(fn, opt) for fn in todo]))
+            res = list(ex.map(score, [(fn, opt, a.bin) for fn in todo]))
         rows = [(d, sd, fn) for (fn, d, sd) in res if d is not None]
         failed = [fn for (fn, d, sd) in res if d is None]
         rows.sort(key=lambda r: (r[0], abs(r[1]), -cnt.get(r[2], 0), r[2]))
-        out = f"/tmp/triage_{tag}.txt"
+        prefix = "" if a.bin == "civ2" else f"{a.bin}_"
+        out = f"/tmp/triage_{prefix}{tag}.txt"
         with open(out, "w") as f:
             for d, sd, fn in rows:
                 f.write(f"{d:4d} {sd:+5d} {cnt.get(fn,0):3d} {fn} {opt}\n")
