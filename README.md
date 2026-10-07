@@ -61,7 +61,7 @@ To maximize automated byte-for-byte matching before manual decompilation, severa
 
 ### 3b. Remaining Near-Misses (resume here)
 
-**Status of the current pass (civ2 787/1427, SLUS 94/208).** The full 1427-function
+**Status of the current pass (civ2 790/1427, SLUS 94/208).** The full 1427-function
 draft cache was rebuilt (`gen_m2c_cache.py --force`) and swept in three flag sets
 (`-O1 -G8`, `-O1 -G8 -fschedule-insns -fschedule-insns2`,
 `-O2 -G8 -fno-strength-reduce`): **the raw m2c drafts match nothing exactly** — every
@@ -111,6 +111,13 @@ Four idioms from the current pass, each of which alone turned a near miss into a
   `M2C_FIELD(var_v0 + (s32)(u8 *)arg0, s32 *, 0x1D4)`; the plain
   `M2C_FIELD((var_v0 + arg0), ...)` canonicalises to `addu $v0, $a0, $v0`
   (`func_800B1408`).
+* **A halfword that is loaded and used as a word must be held in an `s32`, not an `s16`.**
+  With `s16 v = arr[i];` cc1 emits `lhu` + `sll 16`/`sra 16` at each use; declaring the
+  variable `s32` makes it load with the sign-extending `lh` and use the value directly,
+  which is what retail does (`func_800C84F0`, `func_8007E6AC` -- the latter went from 17
+  diffs to a match with that single edit, and the same one-line change in
+  `func_80086178`).  Retail's `lh`/`lb` where m2c produced `lhu`/`lbu` plus a shift is the
+  tell.
 * **A multiply that is re-derived every iteration sits at the *top* of the loop body.**
   m2c's `do { ...; var_v0 = var_v1 * 4; } while (...)` puts the shift in the back edge;
   retail (`func_800B1408`) computes it at the loop head and again in the branch delay

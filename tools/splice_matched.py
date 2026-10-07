@@ -268,7 +268,7 @@ def splice_binary(binary: str):
             else:
                 if in_body:
                     s = l.strip()
-                    if s.startswith("extern ") or re.match(r"^(?:M2C_UNK|void|s32|u32|s16|u16|s8|u8)[ \t*]+\bfunc_[0-9A-F]{8}\([^)]*\);$", s):
+                    if s.startswith("extern ") or re.match(r"^(?:M2C_UNK|void|s32|u32|s16|u16|s8|u8)[ \t*]+\bfunc_[0-9A-F]{8}\([^)]*\);\s*(?:/\*.*\*/)?$", s):
                         l = fix_decl_line(l, "    ")
                     elif alias_map:
                         for orig_sym, alias_sym in alias_map.items():
