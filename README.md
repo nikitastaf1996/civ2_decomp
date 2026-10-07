@@ -86,7 +86,9 @@ Five enhanced drafts that used to fail `cc1` now compile after small repairs
 (0x1a8 vs 0x1a0; drop the bogus `var_s6 = saved_reg_s6;`), `func_800A74AC` 212
 (`SsVoKeyOff` prototype + `spAC` → `M2C_FIELD(&spA0, s32 *, 0xC)`), `func_800B80B0`
 498 (`func_80014514` is the varargs stub of idiom 0r), `func_8008528C` 299, and
-`func_800B918C` 70 (0x134 vs 0x13c; `spE8` → `M2C_FIELD(&sp28, s32 *, 0xC0)`).
+and `func_800B918C` 63 (0x134 vs 0x13c) — fix `spE8` → `M2C_FIELD(&sp28, s32 *, 0xC0)` and
+size the frame objects (`s8 sp28[0x2A0]; s8 sp2C8[0x98];`) so the 0x378-byte retail frame
+comes back (a bare `M2C_UNK sp28;` compiles to a 0x48 frame and never matches).
 
 `tools/auto_match_sweep.py --near N` also records the functions that are *close*
 but not exact, which turns the sweep into a triage tool.  The queue is a snapshot
