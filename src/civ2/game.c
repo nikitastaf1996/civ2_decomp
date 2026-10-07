@@ -2323,7 +2323,44 @@ s32 func_8007B798(arg0)
     return arg0;
 }
 
-INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_8007B810);
+s32 func_8007B810(s32 arg0, s32 arg1) {
+    /* The unit table's x and y columns are reached through two *separate*
+       symbol bases in the retail build: cc1 emits one lui/addu $at pair per
+       symbol, so two 0x1A-stride arrays it is (a single struct array would
+       share one base and use `lh $v0, 2($at)` for the second field). */
+    typedef struct { s16 x; s16 unk[0xC]; } UnitX;
+    typedef struct { s16 y; s16 unk[0xC]; } UnitY;
+    extern UnitX D_8010D6B4[];
+    extern UnitY D_8010D6B6[];
+    extern s16 D_8011A280;
+    extern s16 D_8011C308;
+    extern s16 D_8011C30A;
+    s32 func_800988E8__func_8007B810() __asm__("func_800988E8");
+    s32 func_8007B798__func_8007B810() __asm__("func_8007B798");
+    s32 i;
+    s32 var_v1;
+    s32 var_s0;
+
+    var_s0 = -1;
+    var_v1 = 0;
+    if ((arg1 >= 0) && (arg1 < D_8011C30A) && (arg0 >= 0)) {
+        var_v1 = arg0 < D_8011C308;
+    }
+    if ((var_v1 == 0) || (func_800988E8__func_8007B810(arg0, arg1) >= 0)) {
+        i = 0;
+        while (var_s0 < 0) {
+            if (i >= D_8011A280) {
+                break;
+            }
+            if ((D_8010D6B4[i].x == arg0) && (D_8010D6B6[i].y == arg1)) {
+                var_s0 = i;
+            }
+            i += 1;
+        }
+        var_s0 = func_8007B798__func_8007B810(var_s0);
+    }
+    return var_s0;
+}
 
 
 void func_8007B91C(s32 arg0) {
@@ -2367,7 +2404,7 @@ loop_1:
 INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_8007B9EC);
 
 void func_8007BB9C(s32 arg0, s32 arg1, s32 arg2) {
-    s32 func_8007B810(s32, s32);
+    s32 func_8007B810();
     void func_800985C8(s32 arg0, s32 arg1, s32 arg2, s32 arg3);
     void func_80098440(s32 arg0, s32 arg1, u32 arg2);
     extern s16 D_8010D6B4;
@@ -6797,7 +6834,7 @@ void func_800A0228(arg0)
     s32 arg0;
 {
     s32 func_80072A28();
-    s32 func_8007B810(); /* extern */
+    s32 func_8007B810();
     s32 func_80089878(); /* extern */
     M2C_UNK func_8009CCF4(); /* extern */
     M2C_UNK func_8009FED8(); /* extern */
