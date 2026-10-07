@@ -1776,9 +1776,101 @@ s32 func_800705A4(s32 arg0, s32 arg1) {
     return temp_v0;
 }
 
-INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_80070600);
+s32 func_80070600(u8 *arg0, s32 arg1, s32 arg2, M2C_UNK arg3) {
+    void *memcpy();
+    s32 func_800E0418(u8 *, s32, M2C_UNK);
+    u8 *func_800F59F0(M2C_UNK);
+    M2C_UNK func_800F5A24(M2C_UNK);
+    extern s32 D_80158728;
+    extern s32 D_8015872C;
+    extern s32 D_80158730;
+    extern s32 D_80158738;
+    s32 temp_s4;
+    register u8 *var_s1 __asm__("$17");
+    register u8 *temp_v0 __asm__("$18");
+    register M2C_UNK var_s3 __asm__("$19");
+    u8 *var_v1;
+    s32 temp_v0_2;
+    s32 temp_v0_3;
+    s32 var_s0;
 
-INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800706F8);
+    var_s0 = arg1;
+    var_s3 = arg3;
+    var_s1 = arg0;
+    temp_v0 = func_800F59F0(var_s3);
+    var_v1 = temp_v0 + D_80158730;
+    temp_s4 = var_s0;
+loop_1:
+    if (var_s0 > 0) {
+        *var_v1 = *var_s1;
+        var_s1 += 1;
+        var_v1 += 1;
+        temp_v0_2 = D_80158730 + 1;
+        D_80158730 = temp_v0_2;
+        var_s0 -= 1;
+        if (temp_v0_2 >= 0x1000) {
+            temp_v0_3 = func_800E0418(temp_v0, D_80158728, 0x1000);
+            D_80158728 += temp_v0_3;
+            D_8015872C += temp_v0_3;
+            D_80158738 += 0x1000;
+            D_80158730 = 0;
+            var_v1 = temp_v0;
+        }
+        goto loop_1;
+    }
+    func_800F5A24(var_s3);
+    return temp_s4;
+}
+
+u32 func_800706F8(u32 arg0, u32 arg1, s32 arg2, M2C_UNK arg3) {
+    void *memcpy();
+    M2C_UNK VSync(M2C_UNK);                             /* extern */
+    s32 func_800E065C(s32, u8 *);                       /* extern */
+    u8 *func_800F59F0(M2C_UNK);                         /* extern */
+    M2C_UNK func_800F5A24(M2C_UNK);                     /* extern */
+    extern s32 D_801586A0;
+    extern s32 D_80158728;
+    extern s32 D_80158730;
+    extern s32 D_80158738;
+    u32 temp_s3;
+    register u8 *var_s0 __asm__("$16");
+    register u32 var_s1 __asm__("$17");
+    register u8 *temp_v0 __asm__("$18");
+    register M2C_UNK var_s4 __asm__("$20");
+    u8 *var_v1;
+
+    var_s0 = arg0;
+    var_s1 = arg1;
+    var_s4 = arg3;
+    temp_v0 = func_800F59F0(var_s4);
+    var_v1 = temp_v0 + D_80158730;
+    if ((var_s1 > 0x1FF000U) || (var_s0 > 0x80200000U)) {
+        D_801586A0 = 1;
+        return 0U;
+    }
+    temp_s3 = var_s1;
+    if ((s32) temp_s3 > 0) {
+        do {
+            if (D_80158730 >= 0x1000) {
+                if ((s32) var_s1 >= 2) {
+                    D_80158728 = func_800E065C(D_80158728, temp_v0);
+                } else {
+                    VSync(0);
+                }
+                D_80158730 = 0;
+                var_v1 = temp_v0;
+            }
+            *var_s0 = (u8) *var_v1;
+            var_v1 += 1;
+            D_80158730 += 1;
+            var_s1 -= 1;
+            D_80158738 += 1;
+            var_s0 += 1;
+        } while ((s32) var_s1 > 0);
+    }
+    func_800F5A24(var_s4);
+    return temp_s3;
+}
 
 
 s32 func_80070824(s32 arg0) {

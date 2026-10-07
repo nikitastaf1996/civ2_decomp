@@ -51,17 +51,49 @@ def save_bank(bank):
     os.replace(tmp, BANK)
 
 
+DECL_RE = re.compile(
+    r"^(?:extern\s+[^;]+;"
+    r"|(?:M2C_UNK|void|s32|u32|s16|u16|s8|u8)[ \t*]+\w+\s*\([^)]*\)\s*;(?:\s*/\* extern \*/)?)$"
+)
+
+
 def definition_text(draft_text, fn):
-    """Return the draft's definition of `fn`, with the prologue stripped."""
+    """Return the draft's definition of `fn`, with its declarations folded in.
+
+    `splice_matched.py` copies the definition alone into the translation unit, so a
+    draft that declares a global or a callee prototype at *file* scope would lose
+    those declarations and the spliced TU would stop compiling (`D_80158738
+    undeclared`).  Move every file-scope declaration that precedes the definition
+    into the body instead, which is where `try_match.py` saw them anyway (it
+    compiles the whole draft file).
+    """
     start = re.search(rf"(?m)^[A-Za-z_][A-Za-z0-9_* \t]*\b{re.escape(fn)}\s*\(", draft_text)
     if not start:
         raise SystemExit(f"no definition of {fn} found in the draft")
-    body = draft_text[start.start():]
+    prologue, body = draft_text[: start.start()], draft_text[start.start():]
     # Drop trailing prose/comments after the definition (a draft may keep notes).
     end = body.rfind("\n}")
     if end != -1:
         body = body[: end + 2]
-    return body.rstrip("\n") + "\n"
+    body = body.rstrip("\n") + "\n"
+    decls = [l.strip() for l in prologue.splitlines() if DECL_RE.match(l.strip())]
+    # Keep the last occurrence of each declaration and skip ones the body already has.
+    keep, seen = [], set()
+    for d in reversed(decls):
+        name = re.search(r"\b(D_[0-9A-F]{8}|func_[0-9A-F]{8}|\w+)\s*\(", d)
+        key = name.group(1) if name else d
+        if key in seen:
+            continue
+        seen.add(key)
+        if d in body or f"extern {d[7:]}" in body:
+            continue
+        keep.append(d)
+    if keep:
+        brace = body.index("{")
+        nl = body.index("\n", brace)
+        injected = "".join(f"\n    {d}" for d in reversed(keep))
+        body = body[:nl] + injected + body[nl:]
+    return body
 
 
 def verify(path, fn, binary, opt):
