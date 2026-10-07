@@ -1,0 +1,547 @@
+# Best known score per unmatched civ2 function, from tools/triage_all.py
+# cols: diffs  size_delta  callers  func  opt
+# Regenerate: python3 tools/triage_all.py --opt "-O1 -G8" --opt "-O1 -G8 -fschedule-insns -fschedule-insns2" --opt "-O2 -G8 -fno-strength-reduce"
+   3    +0   3 func_800B1408 -O1 -G8
+   7    +4  11 func_8007B334 -O2 -G8 -fno-strength-reduce
+   9    +0  29 func_80070600 -O1 -G8
+  11    +0  29 func_800706F8 -O1 -G8
+  11    -4   1 func_800CEE08 -O1 -G8 -fschedule-insns -fschedule-insns2
+  11    -8   1 func_800CBD90 -O1 -G8
+  12    -4  11 func_800B322C -O1 -G8 -fschedule-insns -fschedule-insns2
+  12    -4   3 func_800E028C -O2 -G8 -fno-strength-reduce
+  12   -28   1 func_80094CC4 -O2 -G8 -fno-strength-reduce
+  13   -16   3 func_80085170 -O1 -G8
+  14    +0   2 func_800A3FB0 -O2 -G8 -fno-strength-reduce
+  14    +0   1 func_80042ABC -O1 -G8
+  14    +0   0 func_800CE838 -O1 -G8
+  14   -12   5 func_800E02BC -O2 -G8 -fno-strength-reduce
+  14   -12   2 func_800E02F4 -O2 -G8 -fno-strength-reduce
+  15    +0   3 func_800146C8 -O1 -G8
+  15    +0   3 func_800CB094 -O1 -G8 -fschedule-insns -fschedule-insns2
+  15    +0   2 func_800A392C -O1 -G8
+  15    -8   5 func_80014638 -O1 -G8
+  15   -12   2 func_800D9C5C -O2 -G8 -fno-strength-reduce
+  16    +0   2 func_80077C90 -O1 -G8
+  16    -4   2 func_800B1F54 -O1 -G8
+  16    +4   1 func_80090C5C -O1 -G8
+  16    +8   4 func_800E00A8 -O1 -G8
+  17    +0  15 func_8007E6AC -O2 -G8 -fno-strength-reduce
+  17    +0   1 func_80016AF4 -O2 -G8 -fno-strength-reduce
+  17    +0   0 func_80042554 -O1 -G8
+  17    +4   6 func_800A2444 -O2 -G8 -fno-strength-reduce
+  17    -8   0 func_800B98D0 -O2 -G8 -fno-strength-reduce
+  17   -12   2 func_800D9C18 -O2 -G8 -fno-strength-reduce
+  18    +4   2 func_800DA388 -O1 -G8
+  18    +4   1 func_8007199C -O1 -G8
+  18    +4   0 func_8009270C -O1 -G8
+  18   -12   5 func_80085784 -O2 -G8 -fno-strength-reduce
+  18   +12   4 func_800C85FC -O2 -G8 -fno-strength-reduce
+  19    +8   3 func_80035314 -O2 -G8 -fno-strength-reduce
+  19   -12   3 func_800A25A0 -O2 -G8 -fno-strength-reduce
+  19   -44   1 func_80092A2C -O1 -G8
+  20    +0   2 func_800C8368 -O1 -G8
+  20    +4  20 func_800C84F0 -O2 -G8 -fno-strength-reduce
+  20    +8   4 func_800AEA2C -O1 -G8
+  21    +0   1 func_80071828 -O2 -G8 -fno-strength-reduce
+  21    +0   1 func_80095F14 -O1 -G8
+  21   -12   7 func_800987D8 -O1 -G8
+  21   -12   2 func_80085864 -O1 -G8
+  22    +8   0 func_8009CA14 -O1 -G8
+  22   -32   9 func_800B8F0C -O1 -G8
+  22   -40   0 func_800B8FB8 -O2 -G8 -fno-strength-reduce
+  23    +4   0 func_8009F6B4 -O1 -G8
+  23   +20   1 func_80094544 -O1 -G8
+  23   -24   2 func_800E03AC -O1 -G8
+  23   -24   2 func_80092E04 -O1 -G8
+  23   -32   4 func_800E0350 -O1 -G8
+  23   -36   1 func_800B9840 -O2 -G8 -fno-strength-reduce
+  24    +0   2 func_8002A700 -O1 -G8 -fschedule-insns -fschedule-insns2
+  24    -4   4 func_800897F4 -O1 -G8 -fschedule-insns -fschedule-insns2
+  24    -8   1 func_800CEE38 -O1 -G8 -fschedule-insns -fschedule-insns2
+  24   -20   0 func_80096658 -O2 -G8 -fno-strength-reduce
+  25    +0   1 func_800A8904 -O1 -G8
+  25    +4   2 func_8007D464 -O1 -G8
+  25    +4   1 func_800C6F8C -O1 -G8
+  25    +8   6 func_8008F8A0 -O1 -G8
+  25   -16   1 func_800B3FE4 -O1 -G8
+  26    -4   2 func_800AD88C -O1 -G8
+  26   -20   1 func_8001416C -O2 -G8 -fno-strength-reduce
+  26   -32   3 func_8005419C -O1 -G8
+  27    +0   1 func_800A8718 -O1 -G8 -fschedule-insns -fschedule-insns2
+  27    +0   0 func_800964C8 -O1 -G8
+  27    -4   3 func_8005B750 -O1 -G8
+  27    -4   1 func_8002E5E0 -O1 -G8
+  27    +8   5 func_800DF7B8 -O1 -G8
+  27    -8   2 func_800894F4 -O1 -G8 -fschedule-insns -fschedule-insns2
+  27    -8   1 func_800B097C -O2 -G8 -fno-strength-reduce
+  27   +16   2 func_800A7EDC -O1 -G8
+  28    +0   1 func_80088BD8 -O1 -G8
+  28    -8   4 func_8002B864 -O2 -G8 -fno-strength-reduce
+  29    +0   1 func_80013F50 -O2 -G8 -fno-strength-reduce
+  30    +4   0 func_800CAF9C -O1 -G8
+  30   -20  24 func_800A2A68 -O1 -G8
+  30   -36   3 func_80091530 -O1 -G8
+  31    -8   1 func_80094998 -O2 -G8 -fno-strength-reduce
+  31   -20   0 func_800B92C8 -O2 -G8 -fno-strength-reduce
+  31   -28   2 func_80077E04 -O2 -G8 -fno-strength-reduce
+  32    +4  10 func_800C8658 -O2 -G8 -fno-strength-reduce
+  32    +4   2 func_800B47B4 -O1 -G8
+  32   -16   0 func_8001E8B0 -O2 -G8 -fno-strength-reduce
+  32   -24   1 func_800A2B0C -O1 -G8
+  33    +0   1 func_800D09DC -O1 -G8
+  33    +4   1 func_800B2B10 -O1 -G8
+  33    +8   2 func_8008E990 -O2 -G8 -fno-strength-reduce
+  33   -16   1 func_800948AC -O1 -G8
+  34   -16   0 func_800857CC -O2 -G8 -fno-strength-reduce
+  34   -80   2 func_80041FC4 -O2 -G8 -fno-strength-reduce
+  35    +4   3 func_800A4958 -O1 -G8
+  35    -4   2 func_80099124 -O2 -G8 -fno-strength-reduce
+  35    +4   0 func_800D8B4C -O2 -G8 -fno-strength-reduce
+  35    -8   1 func_800A250C -O2 -G8 -fno-strength-reduce
+  36    +0   2 func_80075228 -O1 -G8
+  36    +4   5 func_80084B84 -O1 -G8
+  36    -4   2 func_80074D5C -O2 -G8 -fno-strength-reduce
+  36    +4   1 func_8008D428 -O1 -G8
+  36    +8   0 func_800947A4 -O1 -G8
+  36   -12   1 func_800A3B08 -O2 -G8 -fno-strength-reduce
+  36   -16   0 func_8001E7E8 -O2 -G8 -fno-strength-reduce
+  36   -20   1 func_800B12C0 -O2 -G8 -fno-strength-reduce
+  36   -24   0 func_800A36C4 -O2 -G8 -fno-strength-reduce
+  37    +0   0 func_80075924 -O1 -G8
+  37    +4   2 func_800CB254 -O1 -G8 -fschedule-insns -fschedule-insns2
+  37   +20  12 func_80072AD8 -O1 -G8
+  37   -56   6 func_8009CF78 -O1 -G8
+  38    -4   2 func_80045290 -O2 -G8 -fno-strength-reduce
+  38    +4   2 func_80084C34 -O1 -G8
+  38    +4   0 func_800C6728 -O2 -G8 -fno-strength-reduce
+  39    +0   3 func_80095BFC -O1 -G8
+  39    +4   1 func_800A3A04 -O2 -G8 -fno-strength-reduce
+  39    +4   1 func_8009446C -O1 -G8
+  39   +16  16 func_800D8C58 -O2 -G8 -fno-strength-reduce
+  40    +0  12 func_800D5EB0 -O1 -G8
+  40    +0   6 func_80014340 -O2 -G8 -fno-strength-reduce
+  40    +4  15 func_800A85E4 -O1 -G8
+  40    -8   2 func_8004DEC0 -O1 -G8
+  40   -12   0 func_800C67FC -O2 -G8 -fno-strength-reduce
+  40   -16   1 func_80067A3C -O1 -G8
+  41    -8   6 func_80098BB4 -O2 -G8 -fno-strength-reduce
+  41    -8   6 func_80016138 -O1 -G8
+  41   -20  15 func_800CEB2C -O2 -G8 -fno-strength-reduce
+  41   -40   0 func_80014200 -O1 -G8
+  42   -12   1 func_800C7AC8 -O2 -G8 -fno-strength-reduce
+  42   -12   1 func_800C80D4 -O1 -G8 -fschedule-insns -fschedule-insns2
+  43    +0   1 func_800CB37C -O1 -G8
+  43    +0   0 func_8006EC14 -O2 -G8 -fno-strength-reduce
+  43   -32   6 func_800B9940 -O2 -G8 -fno-strength-reduce
+  44    +0   1 func_80095AD4 -O1 -G8
+  44    -4   0 func_8009F460 -O1 -G8
+  45    +0   2 func_800A8F94 -O2 -G8 -fno-strength-reduce
+  45    +8   9 func_800D86B4 -O1 -G8
+  45   +12   1 func_80048E78 -O1 -G8 -fschedule-insns -fschedule-insns2
+  46   +20  11 func_8005B690 -O1 -G8 -fschedule-insns -fschedule-insns2
+  46   +20   3 func_800A5B40 -O1 -G8
+  47    +4   0 func_800C0AEC -O1 -G8
+  47    -8  12 func_80098A7C -O1 -G8
+  47   +20   2 func_80014F10 -O1 -G8
+  47   +20   1 func_800BBCE8 -O1 -G8
+  47   -40  13 func_800C2240 -O1 -G8
+  48    +0  17 func_80095094 -O1 -G8
+  48    -8   3 func_80030488 -O2 -G8 -fno-strength-reduce
+  48   -16   2 func_8005A60C -O2 -G8 -fno-strength-reduce
+  48   +20   1 func_800BEA94 -O2 -G8 -fno-strength-reduce
+  48   -28   1 func_800A3EEC -O2 -G8 -fno-strength-reduce
+  48   -48   6 func_800AF5CC -O2 -G8 -fno-strength-reduce
+  49    +0   1 func_800D0B28 -O1 -G8 -fschedule-insns -fschedule-insns2
+  49    -8   1 func_800CAB04 -O1 -G8
+  49   -12   1 func_800CB0F0 -O2 -G8 -fno-strength-reduce
+  49   -20  19 func_80018CA4 -O1 -G8
+  49   +20   1 func_800BC964 -O1 -G8
+  49   +24   2 func_800B08CC -O2 -G8 -fno-strength-reduce
+  50    +0   0 func_800BFA3C -O2 -G8 -fno-strength-reduce
+  50    +4   1 func_80084CEC -O1 -G8
+  50   -52   4 func_80098980 -O2 -G8 -fno-strength-reduce
+  51   +12   4 func_8008957C -O1 -G8
+  51   +36   1 func_80094394 -O2 -G8 -fno-strength-reduce
+  51   +44   1 func_800C2198 -O2 -G8 -fno-strength-reduce
+  51   +44   1 func_800C3AB4 -O2 -G8 -fno-strength-reduce
+  51   -48   4 func_8009BA3C -O1 -G8
+  52   -12   7 func_8004A058 -O1 -G8
+  52   +12   0 func_800759EC -O2 -G8 -fno-strength-reduce
+  52   -36   1 func_800DE670 -O1 -G8
+  53  -116  19 func_800DD908 -O1 -G8
+  54    -4   2 func_800A8D24 -O1 -G8
+  54    -4   1 func_800A4A4C -O2 -G8 -fno-strength-reduce
+  54   +12   1 func_80044450 -O1 -G8
+  55    +4   3 func_800D7DB8 -O1 -G8 -fschedule-insns -fschedule-insns2
+  55    -4   1 func_80067F78 -O1 -G8
+  55   -12   1 func_800BAC60 -O2 -G8 -fno-strength-reduce
+  55   -24   4 func_800B2B9C -O1 -G8
+  55   +32   1 func_800BD6F4 -O2 -G8 -fno-strength-reduce
+  55   +44   1 func_800C0BC8 -O2 -G8 -fno-strength-reduce
+  56   +16   3 func_80086178 -O1 -G8
+  56   +16   1 func_80089724 -O2 -G8 -fno-strength-reduce
+  57    -4  48 func_800A26F8 -O1 -G8
+  57   -12   3 func_800CE140 -O2 -G8 -fno-strength-reduce
+  57   +16   2 func_8008C924 -O1 -G8
+  58   -16  14 func_800C68A8 -O2 -G8 -fno-strength-reduce
+  58   -24   1 func_8004222C -O1 -G8 -fschedule-insns -fschedule-insns2
+  58   -24   1 func_8004232C -O1 -G8 -fschedule-insns -fschedule-insns2
+  58   -24   1 func_8004242C -O1 -G8 -fschedule-insns -fschedule-insns2
+  58   -68   2 func_8005FF90 -O1 -G8
+  59    -4   1 func_800CA9C8 -O2 -G8 -fno-strength-reduce
+  59   +16   4 func_80089648 -O2 -G8 -fno-strength-reduce
+  59   -24   1 func_800A82A4 -O1 -G8
+  59   +48   2 func_800C58D8 -O1 -G8
+  60    -4   1 func_800C7B74 -O1 -G8
+  61    -4   1 func_80043F78 -O1 -G8
+  61    -4   1 func_800A3CBC -O1 -G8
+  61    -8   2 func_80098D4C -O1 -G8
+  62    +0   0 func_80014014 -O1 -G8
+  62   -56   0 func_800B8910 -O1 -G8
+  63    -8  45 func_800B918C -O1 -G8
+  63   -96   1 func_800DF23C -O1 -G8
+  64    +0   4 func_80047C9C -O2 -G8 -fno-strength-reduce
+  64    +0   1 func_80098040 -O1 -G8
+  64    +0   1 func_80090560 -O1 -G8 -fschedule-insns -fschedule-insns2
+  64    +8   0 func_800AAFAC -O2 -G8 -fno-strength-reduce
+  64   -12   1 func_8006B28C -O1 -G8
+  64   +32   6 func_8007E384 -O1 -G8
+  64   -32   0 func_800C77EC -O1 -G8
+  65    +0   1 func_8006B7F8 -O1 -G8
+  65   +32   2 func_8002E70C -O2 -G8 -fno-strength-reduce
+  66    +0   4 func_8007EB40 -O2 -G8 -fno-strength-reduce
+  66    +0   1 func_80070CD4 -O1 -G8
+  66    +4   1 func_800A3BB0 -O2 -G8 -fno-strength-reduce
+  66    -4   1 func_80090F24 -O1 -G8
+  66   -12   2 func_80088788 -O2 -G8 -fno-strength-reduce
+  66   -16   0 func_80059F84 -O1 -G8
+  66   +52  11 func_800C83D4 -O1 -G8
+  67    +0   1 func_8007F840 -O1 -G8
+  67    +4   2 func_800158A8 -O1 -G8
+  67    -8   1 func_800998F0 -O1 -G8
+  68    -8   2 func_800AD994 -O2 -G8 -fno-strength-reduce
+  68   +16  29 func_800B24F4 -O1 -G8
+  69    -4   1 func_8009026C -O1 -G8
+  69    -8   6 func_800A1510 -O1 -G8
+  69   +20   1 func_80085E18 -O1 -G8
+  70    +0   1 func_8009AC9C -O1 -G8
+  70    +4   1 func_80048360 -O2 -G8 -fno-strength-reduce
+  70    -8   2 func_8009B488 -O1 -G8
+  70   -32   1 func_800C7D04 -O1 -G8
+  71    -4   1 func_800D140C -O1 -G8
+  71    +8   2 func_800AC278 -O1 -G8
+  71   +32   7 func_8001D720 -O2 -G8 -fno-strength-reduce
+  71  -128   0 func_800CEF5C -O2 -G8 -fno-strength-reduce
+  72    +8   5 func_8007B9EC -O1 -G8
+  72   -20   2 func_8008D2FC -O1 -G8 -fschedule-insns -fschedule-insns2
+  72   -24   2 func_8007F720 -O2 -G8 -fno-strength-reduce
+  72   -24   2 func_800ADB1C -O2 -G8 -fno-strength-reduce
+  72  -136   2 func_800CE238 -O1 -G8
+  73    -8   0 func_800AADB4 -O1 -G8
+  73   +12   2 func_800CB988 -O2 -G8 -fno-strength-reduce
+  74   -12   2 func_80026D68 -O1 -G8 -fschedule-insns -fschedule-insns2
+  74   -16   3 func_80041B8C -O2 -G8 -fno-strength-reduce
+  75   +12   0 func_800D6144 -O2 -G8 -fno-strength-reduce
+  75   +32   2 func_80059E04 -O1 -G8
+  77    -8   1 func_8004E004 -O1 -G8
+  77    +8   0 func_800BBB80 -O2 -G8 -fno-strength-reduce
+  77   +12   1 func_800A1978 -O2 -G8 -fno-strength-reduce
+  77   +16  11 func_8008F4A8 -O2 -G8 -fno-strength-reduce
+  78   -28   7 func_8006DD6C -O1 -G8
+  79    +0   0 func_800B5E68 -O1 -G8
+  79    -4   1 func_800B284C -O1 -G8
+  79    -8  12 func_8007D110 -O2 -G8 -fno-strength-reduce
+  79   -16  12 func_800B95BC -O2 -G8 -fno-strength-reduce
+  81    +0   9 func_8006A864 -O1 -G8 -fschedule-insns -fschedule-insns2
+  82    +0   1 func_80098168 -O1 -G8
+  82   +24   1 func_8009FED8 -O2 -G8 -fno-strength-reduce
+  84    +0   0 func_800BE910 -O2 -G8 -fno-strength-reduce
+  85   +32   2 func_800AD010 -O2 -G8 -fno-strength-reduce
+  86    -4   2 func_800261AC -O1 -G8
+  86    +8  42 func_80089980 -O1 -G8
+  87    -8   1 func_800D831C -O2 -G8 -fno-strength-reduce
+  87    -8   0 func_8009CAD8 -O2 -G8 -fno-strength-reduce
+  87   -12   2 func_800CB828 -O2 -G8 -fno-strength-reduce
+  87   +28   1 func_800996A4 -O1 -G8
+  87   +52   4 func_8008F758 -O1 -G8
+  88   -28   4 func_80042078 -O1 -G8
+  89    +0   3 func_80048CC8 -O1 -G8 -fschedule-insns -fschedule-insns2
+  89    +0   2 func_80014FFC -O2 -G8 -fno-strength-reduce
+  90    -4   0 func_800BF8BC -O1 -G8
+  90   -12   0 func_800DFA14 -O1 -G8
+  90   -28   2 func_8004DD34 -O2 -G8 -fno-strength-reduce
+  90  -124   2 func_800CE360 -O1 -G8
+  91    -8   1 func_8008FDC0 -O1 -G8
+  92    -4   1 func_800903A0 -O1 -G8
+  92   -16   1 func_800C5F60 -O1 -G8
+  92   +24   0 func_800D8480 -O2 -G8 -fno-strength-reduce
+  93    -8   3 func_80026BE0 -O1 -G8
+  93   -16   1 func_800AE0C8 -O2 -G8 -fno-strength-reduce
+  93   -52   2 func_800A20AC -O2 -G8 -fno-strength-reduce
+  95   +12   3 func_8002635C -O1 -G8 -fschedule-insns -fschedule-insns2
+  96    -8  10 func_8007D264 -O2 -G8 -fno-strength-reduce
+  96   -48   1 func_800A3494 -O1 -G8
+  96   +64   3 func_800C48B0 -O2 -G8 -fno-strength-reduce
+  97    +8   1 func_8004971C -O2 -G8 -fno-strength-reduce
+  97   -12   1 func_800D9F34 -O1 -G8
+  97   -12   1 func_80071390 -O1 -G8
+  97   -84   5 func_800C6994 -O1 -G8
+  97   -92   4 func_800B0A04 -O1 -G8 -fschedule-insns -fschedule-insns2
+  98    +0   2 func_800DF860 -O1 -G8 -fschedule-insns -fschedule-insns2
+  98   +52   0 func_8002FF28 -O2 -G8 -fno-strength-reduce
+  99   +20   3 func_80071024 -O1 -G8
+  99   -32   1 func_8009F2C8 -O1 -G8
+  99   +44   1 func_800484A8 -O2 -G8 -fno-strength-reduce
+ 100    -4   1 func_80075714 -O1 -G8
+ 100    -4   1 func_8007793C -O1 -G8 -fschedule-insns -fschedule-insns2
+ 100   -12   5 func_80092BE0 -O1 -G8
+ 101   -12   1 func_800C658C -O2 -G8 -fno-strength-reduce
+ 102    +4   5 func_80017528 -O1 -G8
+ 102   +16   1 func_80093DF4 -O1 -G8
+ 103    -8   4 func_800CBE3C -O1 -G8
+ 103    +8   1 func_800DF350 -O1 -G8
+ 103   -12   1 func_8001D880 -O1 -G8
+ 103   +16   4 func_8006A6C8 -O2 -G8 -fno-strength-reduce
+ 104   -36   4 func_8005FB60 -O1 -G8 -fschedule-insns -fschedule-insns2
+ 104   +72   3 func_800B45B8 -O1 -G8
+ 105    +8   1 func_8009B7E8 -O1 -G8 -fschedule-insns -fschedule-insns2
+ 106    +0   4 func_8005FD48 -O1 -G8
+ 106   +36   2 func_8008F5CC -O2 -G8 -fno-strength-reduce
+ 108    +4   1 func_80067D58 -O2 -G8 -fno-strength-reduce
+ 108   +32   2 func_80073D2C -O2 -G8 -fno-strength-reduce
+ 109   +12   2 func_800B4C74 -O1 -G8 -fschedule-insns -fschedule-insns2
+ 110   -16   4 func_800B0F04 -O1 -G8
+ 110   -44   1 func_800DF5B0 -O2 -G8 -fno-strength-reduce
+ 111    +0   0 func_800425F8 -O1 -G8
+ 111   -52   1 func_80018A24 -O1 -G8 -fschedule-insns -fschedule-insns2
+ 112   -16   1 func_80019724 -O1 -G8
+ 113    -4   1 func_8008C6E0 -O2 -G8 -fno-strength-reduce
+ 113   -20   1 func_80044620 -O2 -G8 -fno-strength-reduce
+ 113   +28   4 func_800AE858 -O1 -G8
+ 113   +44   1 func_8001D148 -O1 -G8 -fschedule-insns -fschedule-insns2
+ 113   -56   1 func_80095838 -O2 -G8 -fno-strength-reduce
+ 114   -36   1 func_8009A92C -O1 -G8
+ 116    -4   3 func_80070E04 -O2 -G8 -fno-strength-reduce
+ 117   +24   1 func_800B48C8 -O1 -G8
+ 118   -16  13 func_800AB0CC -O2 -G8 -fno-strength-reduce
+ 119    -8   2 func_800A0020 -O1 -G8 -fschedule-insns -fschedule-insns2
+ 119   -76   4 func_800BFC6C -O2 -G8 -fno-strength-reduce
+ 120    +4   1 func_80093F88 -O1 -G8
+ 121    +0   0 func_800BC614 -O2 -G8 -fno-strength-reduce
+ 121   +12   3 func_800711B8 -O2 -G8 -fno-strength-reduce
+ 126    +0   1 func_80085F34 -O1 -G8 -fschedule-insns -fschedule-insns2
+ 127   +32   1 func_80035114 -O2 -G8 -fno-strength-reduce
+ 127   -76   1 func_80093608 -O2 -G8 -fno-strength-reduce
+ 128   -12   1 func_80088898 -O2 -G8 -fno-strength-reduce
+ 128   +24   6 func_80066074 -O1 -G8
+ 130    +4   8 func_800CACA4 -O1 -G8
+ 130   -48   2 func_8009D1AC -O1 -G8
+ 131    +0   2 func_8009BF0C -O1 -G8
+ 132    +4   2 func_8009B240 -O1 -G8 -fschedule-insns -fschedule-insns2
+ 133   +12   1 func_800CDEB4 -O1 -G8
+ 133   -56   1 func_80097DBC -O1 -G8 -fschedule-insns -fschedule-insns2
+ 134    -4   0 func_80045378 -O2 -G8 -fno-strength-reduce
+ 134   -20   1 func_800D3710 -O1 -G8
+ 135    +4   2 func_800BA8AC -O2 -G8 -fno-strength-reduce
+ 135    -4   1 func_800600D4 -O2 -G8 -fno-strength-reduce
+ 136    -4   2 func_8009B5B8 -O2 -G8 -fno-strength-reduce
+ 136   +12   1 func_8001DE00 -O1 -G8
+ 137  -108   1 func_800B60BC -O1 -G8
+ 138   +48   1 func_800AEB30 -O2 -G8 -fno-strength-reduce
+ 140    -8   1 func_8007154C -O2 -G8 -fno-strength-reduce
+ 140  -112   1 func_800B42B4 -O2 -G8 -fno-strength-reduce
+ 141   -24   1 func_8004503C -O1 -G8
+ 142   +16   1 func_800D5418 -O2 -G8 -fno-strength-reduce
+ 143    +4   1 func_80059B64 -O2 -G8 -fno-strength-reduce
+ 143  -232   3 func_800C150C -O1 -G8
+ 144    +0   1 func_8007E83C -O1 -G8 -fschedule-insns -fschedule-insns2
+ 144   +16   2 func_800A1648 -O1 -G8
+ 144   -76   5 func_80093B88 -O1 -G8
+ 145  -100  16 func_80092770 -O1 -G8
+ 146   +12   1 func_8005E954 -O2 -G8 -fno-strength-reduce
+ 148    -8   6 func_800DDD68 -O1 -G8
+ 148   -32   2 func_800D3D9C -O2 -G8 -fno-strength-reduce
+ 149   -16   3 func_80062B54 -O1 -G8 -fschedule-insns -fschedule-insns2
+ 150    -4   1 func_8009ADF8 -O1 -G8
+ 150    -4   1 func_8005A0BC -O1 -G8
+ 150  -316   1 func_80091048 -O2 -G8 -fno-strength-reduce
+ 151   -12   1 func_80030168 -O2 -G8 -fno-strength-reduce
+ 153   -40   1 func_800CE530 -O1 -G8
+ 154    -8   3 func_8009CCF4 -O2 -G8 -fno-strength-reduce
+ 154   -20   4 func_800CDAD4 -O1 -G8 -fschedule-insns -fschedule-insns2
+ 154  -152   0 func_8006E05C -O2 -G8 -fno-strength-reduce
+ 155  -328   0 func_800A8AB0 -O1 -G8
+ 156   +24   2 func_8002FBE8 -O1 -G8
+ 156   +36   2 func_80097B54 -O2 -G8 -fno-strength-reduce
+ 157   -32   1 func_800D9C98 -O1 -G8
+ 157   -96   0 func_800CBAB0 -O1 -G8 -fschedule-insns -fschedule-insns2
+ 159    +0   0 func_800DBBA0 -O1 -G8
+ 159  -108   0 func_80096014 -O2 -G8 -fno-strength-reduce
+ 160   -16   4 func_80018E88 -O2 -G8 -fno-strength-reduce
+ 160   -28   1 func_8006C1DC -O1 -G8
+ 162   -64   1 func_800D4D0C -O1 -G8
+ 164   -48   1 func_80095588 -O2 -G8 -fno-strength-reduce
+ 164   +72   1 func_80048618 -O2 -G8 -fno-strength-reduce
+ 165    +4   9 func_80074E04 -O1 -G8 -fschedule-insns -fschedule-insns2
+ 167   -28   6 func_8005B258 -O1 -G8
+ 169   +32  27 func_8007B3C8 -O1 -G8
+ 170   -32   0 func_80097758 -O2 -G8 -fno-strength-reduce
+ 171   +20   3 func_8005A364 -O2 -G8 -fno-strength-reduce
+ 172    -4  95 func_800B7D48 -O1 -G8
+ 172   -16   1 func_8005EBD0 -O1 -G8 -fschedule-insns -fschedule-insns2
+ 173   -20   3 func_8006BEFC -O1 -G8
+ 174   +16   0 func_800BD3E4 -O2 -G8 -fno-strength-reduce
+ 175   -16   0 func_800B5B40 -O1 -G8
+ 175   -80   1 func_8006A39C -O2 -G8 -fno-strength-reduce
+ 177   -12   1 func_8007273C -O2 -G8 -fno-strength-reduce
+ 177   -12   1 func_80054294 -O1 -G8
+ 177   +40   2 func_800991C8 -O1 -G8
+ 178    +8   2 func_800DDA04 -O1 -G8
+ 178   -16   1 func_800147A4 -O1 -G8
+ 178   +24   1 func_8006A098 -O1 -G8
+ 179   -16   2 func_8006B410 -O1 -G8 -fschedule-insns -fschedule-insns2
+ 180   +44   3 func_800735DC -O1 -G8
+ 182    +0   1 func_8008FF84 -O2 -G8 -fno-strength-reduce
+ 183   -36   2 func_8006E92C -O2 -G8 -fno-strength-reduce
+ 184   +44   1 func_80041CC4 -O2 -G8 -fno-strength-reduce
+ 186   -12   3 func_8002B0E8 -O1 -G8
+ 191   +40   1 func_8001D300 -O1 -G8
+ 193   -24   1 func_800DC86C -O2 -G8 -fno-strength-reduce
+ 195   +16   1 func_80047988 -O2 -G8 -fno-strength-reduce
+ 196    +0   4 func_800A2CD0 -O1 -G8
+ 196   +12   2 func_800BCA30 -O2 -G8 -fno-strength-reduce
+ 196   -32   2 func_80086268 -O1 -G8
+ 199    +0   4 func_800C8F18 -O1 -G8 -fschedule-insns -fschedule-insns2
+ 199    +0   2 func_8002AD94 -O2 -G8 -fno-strength-reduce
+ 201   -12   1 func_800DD264 -O2 -G8 -fno-strength-reduce
+ 202    +4 152 func_800A74AC -O1 -G8 -fschedule-insns -fschedule-insns2
+ 202  -116   0 func_800A7F58 -O2 -G8 -fno-strength-reduce
+ 204    +0   1 func_800D5654 -O1 -G8 -fschedule-insns -fschedule-insns2
+ 210    +0   2 func_8005F744 -O1 -G8
+ 210    -4   2 func_8008D4C8 -O2 -G8 -fno-strength-reduce
+ 210   -16   2 func_8004E188 -O1 -G8
+ 212    -4   8 func_80060314 -O1 -G8 -fschedule-insns -fschedule-insns2
+ 213   +28   1 func_800D40CC -O2 -G8 -fno-strength-reduce
+ 217  -120   0 func_800A3070 -O1 -G8 -fschedule-insns -fschedule-insns2
+ 218   -48   1 func_800BFE58 -O2 -G8 -fno-strength-reduce
+ 220    +0   1 func_800D0C78 -O1 -G8
+ 220    -4   1 func_800D1040 -O1 -G8
+ 223   +32  33 func_800B0B94 -O2 -G8 -fno-strength-reduce
+ 223  -124   0 func_800BA43C -O1 -G8
+ 231   -40   0 func_800D4F9C -O1 -G8
+ 232   -48  11 func_800A7050 -O1 -G8
+ 233   -44   1 func_80017040 -O2 -G8 -fno-strength-reduce
+ 234   -64   1 func_80048890 -O1 -G8 -fschedule-insns -fschedule-insns2
+ 236   -24  18 func_8004C5E0 -O1 -G8
+ 238    -4   3 func_8004EA94 -O1 -G8 -fschedule-insns -fschedule-insns2
+ 238    +4   2 func_8009FA08 -O1 -G8
+ 239  -112   4 func_800D333C -O1 -G8
+ 240  -112   9 func_800B16F0 -O1 -G8
+ 241    +0  74 func_8007D7DC -O1 -G8 -fschedule-insns -fschedule-insns2
+ 243   -52   2 func_800C60E4 -O2 -G8 -fno-strength-reduce
+ 245   +20   1 func_8002B3DC -O2 -G8 -fno-strength-reduce
+ 247    +8   1 func_8006AE68 -O1 -G8
+ 247   -60   1 func_800DE284 -O2 -G8 -fno-strength-reduce
+ 254   +20   2 func_80073924 -O1 -G8
+ 255   +84   1 func_80014B58 -O2 -G8 -fno-strength-reduce
+ 256   +16   3 func_80016C38 -O2 -G8 -fno-strength-reduce
+ 258   +76   2 func_8001DA30 -O2 -G8 -fno-strength-reduce
+ 266   -16   1 func_800D7EEC -O2 -G8 -fno-strength-reduce
+ 267   +16   7 func_800774D4 -O1 -G8 -fschedule-insns -fschedule-insns2
+ 271  -152   3 func_8004C9FC -O1 -G8
+ 272   -12   4 func_8002A26C -O1 -G8
+ 273    +4  17 func_8007C810 -O1 -G8
+ 282  -184   2 func_800ADC40 -O1 -G8
+ 287   -28   2 func_8005ACB0 -O1 -G8
+ 292  +100   3 func_80079B2C -O2 -G8 -fno-strength-reduce
+ 294  -432   5 func_800264F0 -O2 -G8 -fno-strength-reduce
+ 295  -232   1 func_800A9140 -O2 -G8 -fno-strength-reduce
+ 299   -56   1 func_800D59E4 -O1 -G8
+ 299  -112  31 func_8008528C -O1 -G8
+ 300   +12   2 func_80029DA0 -O2 -G8 -fno-strength-reduce
+ 301    -4   2 func_800C7088 -O1 -G8
+ 303   -24   2 func_800B2CC0 -O1 -G8
+ 303  -104   0 func_800C4A48 -O1 -G8 -fschedule-insns -fschedule-insns2
+ 304  +120   1 func_8006AA0C -O2 -G8 -fno-strength-reduce
+ 312   +72   1 func_800474C8 -O2 -G8 -fno-strength-reduce
+ 316   -56   0 func_800C1C60 -O1 -G8
+ 321   -40   2 func_800C9BB4 -O1 -G8 -fschedule-insns -fschedule-insns2
+ 323   -64  11 func_800D77A8 -O1 -G8
+ 324    -8   0 func_8007EFE0 -O1 -G8
+ 324  -180   1 func_800921F4 -O2 -G8 -fno-strength-reduce
+ 324  -420   0 func_800A1B74 -O2 -G8 -fno-strength-reduce
+ 326  -252   1 func_8006E33C -O1 -G8
+ 327  -260   1 func_800930D8 -O2 -G8 -fno-strength-reduce
+ 334   -48   2 func_80088D70 -O1 -G8
+ 339   -88   1 func_80068120 -O2 -G8 -fno-strength-reduce
+ 341   +12   1 func_8006B914 -O1 -G8 -fschedule-insns -fschedule-insns2
+ 342   +44   1 func_8001CA78 -O1 -G8
+ 342  -124   2 func_800C59EC -O2 -G8 -fno-strength-reduce
+ 343   +12   1 func_80019124 -O1 -G8 -fschedule-insns -fschedule-insns2
+ 346   -68   4 func_800AE23C -O1 -G8 -fschedule-insns -fschedule-insns2
+ 358  -464   1 func_800DE89C -O1 -G8
+ 366    +4   0 func_800BCDB0 -O2 -G8 -fno-strength-reduce
+ 367   -40   6 func_80076EDC -O2 -G8 -fno-strength-reduce
+ 367   -96  25 func_8007C234 -O2 -G8 -fno-strength-reduce
+ 368   +56   1 func_8005B8F0 -O2 -G8 -fno-strength-reduce
+ 369   -24   1 func_8001C364 -O1 -G8
+ 369   -76   1 func_800D8E8C -O2 -G8 -fno-strength-reduce
+ 373  -412   0 func_80096DAC -O1 -G8
+ 385  +124   7 func_80047DC0 -O2 -G8 -fno-strength-reduce
+ 393   -56   1 func_80049918 -O1 -G8
+ 405   -36   1 func_800D95B4 -O2 -G8 -fno-strength-reduce
+ 409   -68   2 func_80015228 -O2 -G8 -fno-strength-reduce
+ 415    -8   4 func_8007DC6C -O2 -G8 -fno-strength-reduce
+ 418  -184   4 func_800919A4 -O1 -G8
+ 419    +4   1 func_8001E0E4 -O1 -G8 -fschedule-insns -fschedule-insns2
+ 420  -132   9 func_800B005C -O2 -G8 -fno-strength-reduce
+ 432  +136   4 func_80015AB8 -O1 -G8 -fschedule-insns -fschedule-insns2
+ 439   +40   2 func_8005E260 -O1 -G8 -fschedule-insns -fschedule-insns2
+ 444  -184   4 func_800AD14C -O1 -G8 -fschedule-insns -fschedule-insns2
+ 450   -40   1 func_80069960 -O1 -G8 -fschedule-insns -fschedule-insns2
+ 456   +84   1 func_800D456C -O1 -G8
+ 459  -216   1 func_800AA668 -O1 -G8
+ 479   -72   1 func_800436F8 -O1 -G8
+ 483    +0  77 func_800B80B0 -O1 -G8 -fschedule-insns -fschedule-insns2
+ 498  -720   0 func_80044824 -O2 -G8 -fno-strength-reduce
+ 507   +36   4 func_8001770C -O2 -G8 -fno-strength-reduce
+ 509  -116   0 func_800C0C80 -O2 -G8 -fno-strength-reduce
+ 523  -464   1 func_80042E98 -O1 -G8
+ 526   -40   0 func_800BBDAC -O1 -G8
+ 528   +36   0 func_800C4FE4 -O2 -G8 -fno-strength-reduce
+ 533  -296  13 func_800AED30 -O1 -G8
+ 552  +100   1 func_80062E08 -O2 -G8 -fno-strength-reduce
+ 573  +132   5 func_8008CA58 -O2 -G8 -fno-strength-reduce
+ 579   +28   2 func_8005923C -O2 -G8 -fno-strength-reduce
+ 581  +104   1 func_8008D840 -O1 -G8
+ 592   -16   5 func_800DA694 -O2 -G8 -fno-strength-reduce
+ 596 -1272  15 func_8008EA50 -O1 -G8 -fschedule-insns -fschedule-insns2
+ 606  -200   0 func_800B9A64 -O1 -G8
+ 623  -200   3 func_800AC394 -O1 -G8 -fschedule-insns -fschedule-insns2
+ 627   +76   1 func_8006C4F8 -O1 -G8
+ 664   -60   1 func_80071C3C -O2 -G8 -fno-strength-reduce
+ 676  -112   0 func_800C3B5C -O1 -G8
+ 695  -200   1 func_80017F08 -O2 -G8 -fno-strength-reduce
+ 705  -112   3 func_800A64A8 -O1 -G8
+ 711  -164   0 func_800A067C -O1 -G8 -fschedule-insns -fschedule-insns2
+ 752  +156   0 func_800DB004 -O2 -G8 -fno-strength-reduce
+ 772  -176   3 func_800AB5C4 -O1 -G8
+ 802  +336   8 func_80046774 -O1 -G8
+ 818  -188   0 func_800BEB60 -O2 -G8 -fno-strength-reduce
+ 821   -72   1 func_80053490 -O1 -G8
+ 829    +0  34 func_80073FD4 -O2 -G8 -fno-strength-reduce
+ 859  -336   0 func_800BAD58 -O1 -G8
+ 900  -308   2 func_80099AC4 -O1 -G8
+ 914  -344   4 func_8004CE60 -O1 -G8 -fschedule-insns -fschedule-insns2
+ 938   -56   7 func_800A4BC0 -O1 -G8
+ 961  +232   1 func_80066B78 -O2 -G8 -fno-strength-reduce
+1004  -576   3 func_800A9678 -O1 -G8
+1007  -612   3 func_800CC530 -O1 -G8
+1146    -4   8 func_8002E7F4 -O2 -G8 -fno-strength-reduce
+1397    +0   0 func_800CF0C4 -O2 -G8 -fno-strength-reduce
+1504  +300   1 func_80035A28 -O1 -G8 -fschedule-insns -fschedule-insns2
+1644  -232   0 func_8009D430 -O1 -G8
+1705  +404   1 func_80033750 -O1 -G8 -fschedule-insns -fschedule-insns2
+1832  -112  11 func_8004A1A4 -O1 -G8
+2722  -240   3 func_8002B8D8 -O1 -G8
+3008  -648   1 func_8004EFA0 -O1 -G8 -fschedule-insns -fschedule-insns2
