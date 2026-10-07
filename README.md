@@ -61,7 +61,7 @@ To maximize automated byte-for-byte matching before manual decompilation, severa
 
 ### 3b. Remaining Near-Misses (resume here)
 
-**Status of the current pass (civ2 790/1427, SLUS 94/208).** The full 1427-function
+**Status of the current pass (civ2 791/1427, SLUS 94/208).** The full 1427-function
 draft cache was rebuilt (`gen_m2c_cache.py --force`) and swept in three flag sets
 (`-O1 -G8`, `-O1 -G8 -fschedule-insns -fschedule-insns2`,
 `-O2 -G8 -fno-strength-reduce`): **the raw m2c drafts match nothing exactly** — every
@@ -122,6 +122,15 @@ Four idioms from the current pass, each of which alone turned a near miss into a
   m2c's `do { ...; var_v0 = var_v1 * 4; } while (...)` puts the shift in the back edge;
   retail (`func_800B1408`) computes it at the loop head and again in the branch delay
   slot, which is what a plain `for` loop with the index expression inside produces.
+
+Machine-assisted queue: `tools/pin_retail.py` (register pins from retail's prologue) and
+the widen-to-`s32` rewrite are cheap to apply in bulk.  Over the 192 candidates within 60
+diffs they produce **6 matches** (`func_80070600`, `func_800706F8`, `func_80086178`,
+`func_8008C924`, and the two cited above when re-derived from raw m2c output) and improve
+30 more; the best remaining ones after both transforms, for the next pass:
+`func_800C67FC` 40 → 12 diffs, `func_8007D464` 25 → 14, `func_8009F460` 44 → 19,
+`func_800C7AC8` 42 → 24, `func_8008C924` solved, `func_8002E5E0` 27 → 24,
+`func_80096658` 24 → 23.  Their transformed drafts are in `/home/user/drafts/`.
 
 Five enhanced drafts that used to fail `cc1` now compile after small repairs
 (`/home/user/drafts/`, best known scores at `-O1 -G8`): `func_80089980` 86 diffs
