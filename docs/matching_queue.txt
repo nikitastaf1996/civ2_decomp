@@ -1,10 +1,7 @@
-# Best known score per unmatched civ2 function, from tools/triage_all.py
+# Best known score per still-unmatched civ2 function, from tools/triage_all.py
 # cols: diffs  size_delta  callers  func  opt
 # Regenerate: python3 tools/triage_all.py --opt "-O1 -G8" --opt "-O1 -G8 -fschedule-insns -fschedule-insns2" --opt "-O2 -G8 -fno-strength-reduce"
-   3    +0   3 func_800B1408 -O1 -G8
-   7    +4  11 func_8007B334 -O2 -G8 -fno-strength-reduce
-   9    +0  29 func_80070600 -O1 -G8
-  11    +0  29 func_800706F8 -O1 -G8
+# Enhanced drafts used for these scores live in /tmp/tri/<func>.c (recreate them with the same command).
   11    -4   1 func_800CEE08 -O1 -G8 -fschedule-insns -fschedule-insns2
   11    -8   1 func_800CBD90 -O1 -G8
   12    -4  11 func_800B322C -O1 -G8 -fschedule-insns -fschedule-insns2
@@ -25,7 +22,6 @@
   16    -4   2 func_800B1F54 -O1 -G8
   16    +4   1 func_80090C5C -O1 -G8
   16    +8   4 func_800E00A8 -O1 -G8
-  17    +0  15 func_8007E6AC -O2 -G8 -fno-strength-reduce
   17    +0   1 func_80016AF4 -O2 -G8 -fno-strength-reduce
   17    +0   0 func_80042554 -O1 -G8
   17    +4   6 func_800A2444 -O2 -G8 -fno-strength-reduce
@@ -40,7 +36,6 @@
   19   -12   3 func_800A25A0 -O2 -G8 -fno-strength-reduce
   19   -44   1 func_80092A2C -O1 -G8
   20    +0   2 func_800C8368 -O1 -G8
-  20    +4  20 func_800C84F0 -O2 -G8 -fno-strength-reduce
   20    +8   4 func_800AEA2C -O1 -G8
   21    +0   1 func_80071828 -O2 -G8 -fno-strength-reduce
   21    +0   1 func_80095F14 -O1 -G8
@@ -178,11 +173,9 @@
   55   -24   4 func_800B2B9C -O1 -G8
   55   +32   1 func_800BD6F4 -O2 -G8 -fno-strength-reduce
   55   +44   1 func_800C0BC8 -O2 -G8 -fno-strength-reduce
-  56   +16   3 func_80086178 -O1 -G8
   56   +16   1 func_80089724 -O2 -G8 -fno-strength-reduce
   57    -4  48 func_800A26F8 -O1 -G8
   57   -12   3 func_800CE140 -O2 -G8 -fno-strength-reduce
-  57   +16   2 func_8008C924 -O1 -G8
   58   -16  14 func_800C68A8 -O2 -G8 -fno-strength-reduce
   58   -24   1 func_8004222C -O1 -G8 -fschedule-insns -fschedule-insns2
   58   -24   1 func_8004232C -O1 -G8 -fschedule-insns -fschedule-insns2
