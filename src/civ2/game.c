@@ -3512,7 +3512,36 @@ INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_80089724);
 
 INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800897F4);
 
-INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_80089878);
+s32 func_80089878(s32 arg0, s32 arg1) {
+    typedef struct { s16 x; s16 unk[0x2B]; } CityX;
+    typedef struct { s16 y; s16 unk[0x2B]; } CityY;
+    extern CityX D_80113ED0[];
+    extern CityY D_80113ED2[];
+    extern s16 D_8011A282;
+    extern s16 D_8011C308;
+    extern s16 D_8011C30A;
+    s32 func_80098848__func_80089878() __asm__("func_80098848");
+    s32 i;
+    s32 var_v1;
+    s32 var_s2;
+
+    var_s2 = -1;
+    var_v1 = 0;
+    if ((arg1 >= 0) && (arg1 < D_8011C30A) && (arg0 >= 0)) {
+        var_v1 = arg0 < D_8011C308;
+    }
+    if (var_v1 != 0) {
+        if (func_80098848__func_80089878(arg0, arg1) >= 0) {
+            for (i = 0; i < D_8011A282; i++) {
+                if ((D_80113ED0[i].x == arg0) && (D_80113ED2[i].y == arg1)) {
+                    var_s2 = i;
+                    break;
+                }
+            }
+        }
+    }
+    return var_s2;
+}
 
 INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_80089980);
 
@@ -6835,7 +6864,7 @@ void func_800A0228(arg0)
 {
     s32 func_80072A28();
     s32 func_8007B810();
-    s32 func_80089878(); /* extern */
+    s32 func_80089878();
     M2C_UNK func_8009CCF4(); /* extern */
     M2C_UNK func_8009FED8(); /* extern */
     M2C_UNK func_800D77A8(); /* extern */
@@ -6886,7 +6915,7 @@ void func_800A03CC(arg0)
 {
     void func_80047424();
     s32 func_80072A28();
-    s32 func_80089878(); /* extern */
+    s32 func_80089878();
     M2C_UNK func_8009CCF4(); /* extern */
     M2C_UNK func_800D77A8(); /* extern */
     extern M2C_UNK D_80113ED4;
