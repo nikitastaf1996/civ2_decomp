@@ -61,6 +61,33 @@ To maximize automated byte-for-byte matching before manual decompilation, severa
 
 ### 3b. Remaining Near-Misses (resume here)
 
+**Status of the current pass (civ2 783/1427, SLUS 94/208).** The full 1427-function
+draft cache was rebuilt (`gen_m2c_cache.py --force`) and swept in three flag sets
+(`-O1 -G8`, `-O1 -G8 -fschedule-insns -fschedule-insns2`,
+`-O2 -G8 -fno-strength-reduce`): **the raw m2c drafts match nothing exactly** — every
+remaining function needs hand repair first. Two concrete, reusable results:
+
+* **Scheduling flags are per-function, not per-file.** `func_800B94A4` (hub, 15
+  callers) matches only with `-O1 -G8 -fschedule-insns -fschedule-insns2`
+  (`-O1 -G8` reproduces everything except the prologue, where retail interleaves
+  each `sw $sN` with the `addu $sN,$a0,$zero` that fills it; `-O2 -G8
+  -fno-strength-reduce` also matches). Enable `-fschedule-insns2` globally and
+  *both* binaries stop matching, so this must be expressed as a `@CFLAGS`
+  annotation, never as a `CC1FLAGS` change.
+* **Annotated functions must declare their use of globals and callees locally.**
+  `maspsx_wrap.py` re-parses the whole translation unit once per flag set, so a
+  spliced body that relies on a file-scope `extern`/prototype further down the
+  file works with the default flags and *fails* with the alternate set
+  (`D_8011E748 undeclared`). Put the declarations inside the function body, as the
+  hand-matched bodies already do.
+
+Five enhanced drafts that used to fail `cc1` now compile after small repairs
+(`/home/user/drafts/`, best known scores at `-O1 -G8`): `func_80089980` 86 diffs
+(0x1a8 vs 0x1a0; drop the bogus `var_s6 = saved_reg_s6;`), `func_800A74AC` 212
+(`SsVoKeyOff` prototype + `spAC` → `M2C_FIELD(&spA0, s32 *, 0xC)`), `func_800B80B0`
+498 (`func_80014514` is the varargs stub of idiom 0r), `func_8008528C` 299, and
+`func_800B918C` 70 (0x134 vs 0x13c; `spE8` → `M2C_FIELD(&sp28, s32 *, 0xC0)`).
+
 `tools/auto_match_sweep.py --near N` also records the functions that are *close*
 but not exact, which turns the sweep into a triage tool.  The queue is a snapshot
 of one flag matrix over one draft cache, so build it from **every** variant cache
