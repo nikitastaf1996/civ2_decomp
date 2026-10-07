@@ -61,7 +61,7 @@ To maximize automated byte-for-byte matching before manual decompilation, severa
 
 ### 3b. Remaining Near-Misses (resume here)
 
-**Status of the current pass (civ2 783/1427, SLUS 94/208).** The full 1427-function
+**Status of the current pass (civ2 787/1427, SLUS 94/208).** The full 1427-function
 draft cache was rebuilt (`gen_m2c_cache.py --force`) and swept in three flag sets
 (`-O1 -G8`, `-O1 -G8 -fschedule-insns -fschedule-insns2`,
 `-O2 -G8 -fno-strength-reduce`): **the raw m2c drafts match nothing exactly** — every
@@ -80,6 +80,41 @@ remaining function needs hand repair first. Two concrete, reusable results:
   file works with the default flags and *fails* with the alternate set
   (`D_8011E748 undeclared`). Put the declarations inside the function body, as the
   hand-matched bodies already do.
+
+**The whole unmatched set is now triaged by score, not by guess.** `tools/triage_all.py`
+writes every enhanced/repair draft to `/tmp/tri/<func>.c` (hand drafts in
+`/home/user/drafts/` win where they exist) and runs `try_match.py` over all of them for
+each requested flag set, producing `/tmp/triage_<opt>.txt` sorted by
+`(diffs, |size delta|, callers)`.  For civ2 at `-O1 -G8`: 544 of 644 drafts compile and
+score, **115 land within 40 instructions** of the target (1 at 3 diffs, 3 at ≤10), and 96
+drafts still fail `cc1` outright.  The sweep's own `--near` mode records nothing for this
+set, because it only scores drafts that assemble — the triage queue is the tool to use.
+
+Four idioms from the current pass, each of which alone turned a near miss into a match
+(`func_80070600`, `func_800706F8`, `func_800B1408`, `func_8007B334`):
+
+* **Pin the variables to the registers retail chose.** cc1 hands the callee-saved
+  registers out by a priority heuristic, so two live-across-call variables routinely land
+  in the opposite order than the original compiler put them — no source spelling changes
+  that.  Retail's prologue states the answer (`addu $s0, $a1, $zero` = "the variable
+  assigned from arg1 lives in $s0"), so write `register <type> var_s0 __asm__("$16");` and,
+  when retail keeps a parameter in a saved register that the draft uses directly, give it
+  an explicit `var_sN = argN;` statement and pin that.  `tools/pin_retail.py` does this
+  automatically from the draft + retail disassembly (it turned the raw m2c drafts of both
+  29-caller functions into matches, and improves 19 further candidates).
+* **A branchless `max`/`min` return is not spelled as an expression.** m2c's
+  `return -(x > 0) & x;` compiles to a branch at every flag set; the source form
+  `var = 0; if (x > 0) var = x; return var;` gives retail's `slt / negu / and` sequence
+  (`func_8007B334`).  Same for `x < 0 ? x : 0` and friends — prefer the statement form.
+* **Operand order survives in the pointer arithmetic, not in the `+`.** For
+  `addu $v0, $v0, $a0` (index first) the spelling that reproduces it is
+  `M2C_FIELD(var_v0 + (s32)(u8 *)arg0, s32 *, 0x1D4)`; the plain
+  `M2C_FIELD((var_v0 + arg0), ...)` canonicalises to `addu $v0, $a0, $v0`
+  (`func_800B1408`).
+* **A multiply that is re-derived every iteration sits at the *top* of the loop body.**
+  m2c's `do { ...; var_v0 = var_v1 * 4; } while (...)` puts the shift in the back edge;
+  retail (`func_800B1408`) computes it at the loop head and again in the branch delay
+  slot, which is what a plain `for` loop with the index expression inside produces.
 
 Five enhanced drafts that used to fail `cc1` now compile after small repairs
 (`/home/user/drafts/`, best known scores at `-O1 -G8`): `func_80089980` 86 diffs
