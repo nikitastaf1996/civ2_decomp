@@ -3858,7 +3858,7 @@ INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_80091048);
 
 
 void func_800912F8(void *arg0, s32 arg1) {
-    s16 func_80094DC8(); /* extern */
+    s32 func_80094DC8();
     s16 temp_v1;
 
     temp_v1 = func_80094DC8(0, 3);
@@ -3872,7 +3872,7 @@ void func_800912F8(void *arg0, s32 arg1) {
 
 
 void func_80091390(void *arg0, s32 arg1) {
-    s16 func_80094DC8(); /* extern */
+    s32 func_80094DC8();
     s16 temp_v1;
 
     temp_v1 = func_80094DC8(0, 3);
@@ -3886,7 +3886,7 @@ void func_80091390(void *arg0, s32 arg1) {
 
 
 void func_80091428(void *arg0, s32 arg1) {
-    s16 func_80094DC8(); /* extern */
+    s32 func_80094DC8();
     s16 temp_v1;
 
     temp_v1 = func_80094DC8(0, 3);
@@ -3897,7 +3897,7 @@ void func_80091428(void *arg0, s32 arg1) {
 
 
 void func_800914AC(void *arg0, s32 arg1) {
-    s16 func_80094DC8(); /* extern */
+    s32 func_80094DC8();
     s16 temp_v1;
 
     temp_v1 = func_80094DC8(0, 3);
@@ -4709,7 +4709,29 @@ INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_80094CC4);
 
 INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_80094CF8);
 
-INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_80094DC8);
+s32 func_80094DC8(s16 arg0, s16 arg1) {
+    float func_80094CF8();
+    s16 temp_v0;
+    s16 var_a2;
+    s16 var_s2;
+    double temp_s0;
+    double temp_ret;
+
+    var_s2 = arg0;
+    var_a2 = arg1;
+    if (arg0 == arg1) {
+        func_80094CF8();
+        return arg0;
+    }
+    if (var_s2 > var_a2) {
+        temp_v0 = var_a2;
+        var_a2 = var_s2;
+        var_s2 = temp_v0;
+    }
+    temp_s0 = (double)(var_a2 - var_s2) + 0.999999;
+    temp_ret = temp_s0 * (double)func_80094CF8();
+    return var_s2 + (s16)temp_ret;
+}
 
 
 void func_80094EBC() {
