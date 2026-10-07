@@ -11687,7 +11687,25 @@ INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800DD264);
 
 INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800DD590);
 
-INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800DD688);
+void func_800DD688(s32 arg0, s32 arg1, s32 arg2) {
+    typedef struct { s32 rel[0x15E]; } CivRelT;
+    extern CivRelT D_801176B4[];
+    s32 var_s2;
+
+    var_s2 = arg2;
+    if (var_s2 & 8) {
+        func_800DD688(arg0, arg1, 4);
+    }
+    if (var_s2 & 0xE) {
+        func_800DD590(arg0, arg1, 0x2A60);
+    }
+    if (var_s2 & 0x2000) {
+        func_800DD590(arg0, arg1, 0xE);
+        var_s2 |= 0x200000;
+    }
+    D_801176B4[arg0].rel[arg1] |= var_s2;
+    D_801176B4[arg1].rel[arg0] |= var_s2;
+}
 
 s32 func_800DD784(arg0, arg1)
     s32 arg0;
