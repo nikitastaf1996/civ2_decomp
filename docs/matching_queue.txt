@@ -16,7 +16,6 @@
   15   -12   2 func_800D9C5C base    -O2 -G8 -fno-strength-reduce
   16    +0   2 func_80077C90 base    -O1 -G8
   16    -4   5 func_80085784 w2      -O1 -G8
-  16    -4   2 func_800B1F54 base    -O1 -G8
   16    +4   1 func_80090C5C base    -O1 -G8
   16    +8   4 func_800E00A8 base    -O1 -G8
   17    +0   3 func_800A25A0 w2      -O1 -G8

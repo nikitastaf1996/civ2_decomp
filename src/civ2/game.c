@@ -9161,11 +9161,34 @@ void func_800B1F4C(void *arg0, s32 arg1) {
     M2C_FIELD(arg0, s32 *, 0x2C) = arg1;
 }
 
-INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800B1F54);
+void func_800B1F54(arg0, arg1)
+    void *arg0;
+    s32 arg1;
+{
+    void *memcpy();
+    s32 func_800B1F28(void *arg0);
+    register void *var_s0 __asm__("$16");
+    register s32 var_s1 __asm__("$17");
+    register s32 temp_a2 __asm__("$6");
+    s32 var_v0;
+
+    var_s0 = arg0;
+    var_s1 = arg1;
+    __asm__("" : "=r"(var_s1) : "0"(var_s1));
+    M2C_FIELD(var_s0, s32 *, 0x30) = (s32)(M2C_FIELD(var_s0, s32 *, 0x30) | 0x1000);
+    M2C_FIELD(var_s0, s32 *, 0x44) = var_s1;
+    if (M2C_FIELD(var_s0, s32 *, 0x30) & 0x40000) {
+        var_v0 = var_s1 * 12 + 2;
+    } else {
+        temp_a2 = var_s1 * func_800B1F28(var_s0);
+        var_v0 = temp_a2 + 2;
+    }
+    M2C_FIELD(var_s0, s32 *, 0x40) = var_v0;
+}
 
 
 void func_800B1FD4(void *arg0, s32 arg1, s32 arg2) {
-    M2C_UNK func_800B1F54(); /* extern */
+    void func_800B1F54();
     M2C_FIELD(arg0, s32 *, 0x30) = (s32) (M2C_FIELD(arg0, s32 *, 0x30) | 0x1000);
     M2C_FIELD(arg0, s32 *, 0x3C) = arg2;
     if (arg1 != 0) {
