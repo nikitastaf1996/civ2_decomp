@@ -9547,7 +9547,29 @@ s32 func_800B31E8(arg0, arg1)
     return 0;
 }
 
-INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800B322C);
+/* @CFLAGS: -O1 -G8 -fschedule-insns -fschedule-insns2 */
+void *func_800B322C(arg0, arg1)
+    void *arg0;
+    s32 arg1;
+{
+    void *memcpy();
+    void *var_v0;
+    s32 var_v1;
+
+    var_v0 = M2C_FIELD(arg0, void **, 0x170);
+    if (var_v0 == NULL) {
+        return NULL;
+    }
+    var_v1 = 0;
+    while (var_v0 != NULL) {
+        if (var_v1 == arg1) {
+            return var_v0;
+        }
+        var_v0 = M2C_FIELD(var_v0, void **, 0xC);
+        var_v1 += 1;
+    }
+    return NULL;
+}
 
 
 s32 func_800B3268(void *arg0) {
@@ -9557,7 +9579,7 @@ s32 func_800B3268(void *arg0) {
 
 
 void func_800B32C4(void *arg0, s32 arg1) {
-    M2C_UNK func_800B322C(); /* extern */
+    void * func_800B322C();
     func_800B322C(arg0, arg1 * M2C_FIELD(arg0, s32 *, 0x44));
 }
 
@@ -9684,7 +9706,7 @@ void func_800B5FF8() {
 
 
 void func_800B6000(s16 arg0) {
-    s32 func_800B322C(); /* extern */
+    void * func_800B322C();
     extern void * D_80158F40;
     s32 temp_v0;
 
@@ -9698,7 +9720,7 @@ void func_800B6000(s16 arg0) {
 
 
 void func_800B6054(s16 arg0) {
-    s32 func_800B322C(); /* extern */
+    void * func_800B322C();
     extern void * D_80158F40;
     s32 temp_v0;
 
@@ -11302,7 +11324,27 @@ INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800CB988);
 
 INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800CBAB0);
 
-INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800CBD90);
+s32 func_800CBD90(void *arg0) {
+    void *memcpy();
+    M2C_UNK func_800F7ACC(s32, M2C_UNK *, M2C_UNK, M2C_UNK, s32, s32, s32, void *); /* extern */
+    M2C_UNK func_800F7E08(s32, M2C_UNK *);              /* extern */
+    s32 func_800F8D10(void *, M2C_UNK, M2C_UNK, M2C_UNK); /* extern */
+    M2C_UNK func_800FAED0(void *);                      /* extern */
+    extern M2C_UNK D_801591A8;
+    extern M2C_UNK func_800CBAB0;
+    extern M2C_UNK func_800CE838;
+    s32 temp_s1;
+
+    temp_s1 = arg0 + 0x84;
+    func_800F7ACC(temp_s1, &D_801591A8, 0x800, 0, 0, 0x140, 0xF0, arg0);
+    if (func_800F8D10(arg0 + 0x420, 0x1F3, 0xA, 0xEC) == 0) {
+        return 0;
+    }
+    func_800FAED0(arg0 + 0xB0);
+    M2C_FIELD(arg0, M2C_UNK **, 0xE8) = (void *)&func_800CE838;
+    func_800F7E08(temp_s1, (void *)&func_800CBAB0);
+    return 1;
+}
 
 INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800CBE3C);
 
@@ -11619,7 +11661,23 @@ s32 func_800CED94(s32 arg0, s32 arg1, s32 arg2, s32 arg3) {
     return (arg0 + arg1) >> 1;
 }
 
-INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800CEE08);
+/* @CFLAGS: -O1 -G8 -fschedule-insns -fschedule-insns2 */
+s32 func_800CEE08(s32 arg0, s32 arg1) {
+    void *memcpy();
+    s32 temp_v1;
+    register s32 temp_v1_2 __asm__("$3");
+
+    temp_v1 = arg0;
+    if (arg0 <= 0) {
+        temp_v1 = ~arg0 + 1;
+    }
+    arg0 = temp_v1;
+    temp_v1_2 = arg1;
+    if (arg1 <= 0) {
+        temp_v1_2 = ~arg1 + 1;
+    }
+    return (arg0 + temp_v1_2) >> 1;
+}
 
 INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800CEE38);
 

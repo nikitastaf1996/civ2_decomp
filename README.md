@@ -7,8 +7,8 @@ Both retail PS-X executables on the disc are split, rebuilt from C + assembly, a
 | Executable | Role | Retail Size | SHA-1 | Game Functions | PsyQ 4.2 SDK Symbols | Matched C Functions | Total Accounted |
 | :--- | :--- | :---: | :--- | :---: | :---: | :---: | :---: |
 | **`SLUS_007.92`** | Title / Setup / Intro Movie Player | 290,816 B (`0x47000`) | `362a030a231fc5952010909faf848a8a461bbb3c` | 208 | 375 | **94 / 208 (45.2%)** | **469 / 583 (80.4%)** |
-| **`CIV2.EXE`** | Main Strategy Game Engine | 1,351,680 B (`0x14A000`) | `919bad81720f9b0e129fd5f10fb155cd7aa3c98c` | 1,427 | 390 | **773 / 1,427 (54.2%)** | **1,163 / 1,827 (63.7%)** |
-| **Combined** | **Full Game** | **1,642,496 B** | **100% Byte-Identical** | **1,635** | **765** | **865 / 1,635 (52.9%)** | **1,630 / 2,400 (67.9%)** |
+| **`CIV2.EXE`** | Main Strategy Game Engine | 1,351,680 B (`0x14A000`) | `919bad81720f9b0e129fd5f10fb155cd7aa3c98c` | 1,427 | 390 | **796 / 1,427 (55.8%)** | **1,186 / 1,827 (64.9%)** |
+| **Combined** | **Full Game** | **1,642,496 B** | **100% Byte-Identical** | **1,635** | **765** | **890 / 1,635 (54.4%)** | **1,655 / 2,410 (68.7%)** |
 
 *(Note: every matched C function is now spliced directly into `src/slus/game.c` and
 `src/civ2/game.c` — including the last three holdouts, whose `.rodata` (a `"+"` string blob
@@ -61,7 +61,7 @@ To maximize automated byte-for-byte matching before manual decompilation, severa
 
 ### 3b. Remaining Near-Misses (resume here)
 
-**Status of the current pass (civ2 791/1427, SLUS 94/208).** The full 1427-function
+**Status of the current pass (civ2 796/1427, SLUS 94/208).** The full 1427-function
 draft cache was rebuilt (`gen_m2c_cache.py --force`) and swept in three flag sets
 (`-O1 -G8`, `-O1 -G8 -fschedule-insns -fschedule-insns2`,
 `-O2 -G8 -fno-strength-reduce`): **the raw m2c drafts match nothing exactly** — every
@@ -122,6 +122,24 @@ Four idioms from the current pass, each of which alone turned a near miss into a
   m2c's `do { ...; var_v0 = var_v1 * 4; } while (...)` puts the shift in the back edge;
   retail (`func_800B1408`) computes it at the loop head and again in the branch delay
   slot, which is what a plain `for` loop with the index expression inside produces.
+
+Three more idioms from this pass (`func_800CBD90`, `func_800B322C`, `func_800CEE08`):
+
+* **An early return inverts which block gcc merges.** `if (f(...) != 0) { body; return 1; }
+  return 0;` lets cc1 merge both returns into one shared epilogue (value in a register);
+  the spelling `if (f(...) == 0) { return 0; } body; return 1;` instead emits the
+  `return 1` as `j <epilogue>` with `addiu $v0, $zero, 1` in the delay slot and the
+  `return 0` as its own one-instruction block at the branch target — exactly retail
+  (`func_800CBD90`).
+* **An early-return guard before a `while` loop is *not* merged with the loop's rotated
+  guard.** `if (var_v0 == NULL) { return NULL; } ... while (var_v0 != NULL) { ... }`
+  keeps two separate `beqz $v0` instructions (the early return's and the loop guard's),
+  where wrapping the loop in `if (var_v0 != NULL) { while ... }` collapses to one
+  (`func_800B322C`, 11 callers).
+* **A `register` pin on `$v1` keeps a second abs() temp from being coalesced into the
+  argument register.** `register s32 temp_v1_2 __asm__("$3");` forces the
+  `addu $v1, $a1, $zero` copy to survive (scheduled into the `bgtz` delay slot) instead
+  of cc1 folding the temp into `$a1` (`func_800CEE08`).
 
 Machine-assisted queue: `tools/pin_retail.py` (register pins from retail's prologue) and
 the widen-to-`s32` rewrite are cheap to apply in bulk.  Over the 192 candidates within 60

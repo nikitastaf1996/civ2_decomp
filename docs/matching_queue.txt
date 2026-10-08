@@ -1,12 +1,7 @@
 # Best score per still-unmatched civ2 function, after the 10-flag-set sweep
 # cols: diffs  size_delta  callers  func  variant  opt
 # variant: base=m2c+repair draft, pinned=tools/pin_retail.py output, widen/w2=widen-to-s32 outputs
-   6    +0   1 func_800A3B08 pinned  -O1 -G8
-   9    +0   0 func_8001E8B0 pinned  -O1 -G8
-  11    -4   1 func_800CEE08 base    -O1 -G8 -fschedule-insns -fschedule-insns2
-  11    -8   1 func_800CBD90 base    -O1 -G8
   12    +0   0 func_800C67FC pinned  -O1 -G8 -fschedule-insns -fschedule-insns2
-  12    -4  11 func_800B322C base    -O1 -G8 -fschedule-insns -fschedule-insns2
   12    -4   3 func_800E028C base    -O2 -G8 -fno-strength-reduce
   12   -28   1 func_80094CC4 base    -O2 -G8 -fno-strength-reduce
   13   -16   3 func_80085170 base    -O1 -G8
