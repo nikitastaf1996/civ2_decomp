@@ -10,7 +10,6 @@
   14    +4   2 func_8007D464 pinned  -O1 -G8
   14   -12   5 func_800E02BC base    -O2 -G8 -fno-strength-reduce
   14   -12   2 func_800E02F4 base    -O2 -G8 -fno-strength-reduce
-  15    +0   3 func_800146C8 base    -O1 -G8
   15    +0   3 func_800CB094 base    -O1 -G8 -fschedule-insns -fschedule-insns2
   15    +0   2 func_800A392C base    -O1 -G8
   15    -8   5 func_80014638 base    -O1 -G8

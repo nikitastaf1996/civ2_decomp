@@ -208,7 +208,26 @@ void func_800145EC() {
 
 INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_80014638);
 
-INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800146C8);
+void func_800146C8(s32 arg0, s32 arg1) {
+    void *memcpy();
+    extern void * D_80158864;
+    register s32 temp_a2 __asm__("$6");
+    register s32 *ptr __asm__("$4");
+    register s32 temp_v1 __asm__("$3");
+    s32 temp_v0;
+
+    temp_a2 = arg0;
+    __asm__("" : "=r"(temp_a2) : "0"(temp_a2));
+    if (temp_a2 < 0x10) {
+        temp_a2 = temp_a2 * 2;
+        ptr = (s32 *)D_80158864;
+        temp_v0 = ~(3 << temp_a2);
+        temp_v1 = ptr[6];
+        temp_v0 = temp_v0 & temp_v1;
+        temp_v1 = arg1 << temp_a2;
+        ptr[6] = temp_v1 | temp_v0;
+    }
+}
 
 s32 func_8001470C(s32 arg0) {
     extern void * D_80158864;
@@ -333,7 +352,7 @@ INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_80016AF4);
 
 void func_80016B6C() {
     s32 func_8001470C();
-    void func_800146C8(s32, s32);
+    void func_800146C8();
     extern s32 D_80158588;
     extern s32 D_8015858C;
     u8 dead_pad[8];

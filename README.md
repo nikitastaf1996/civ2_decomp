@@ -7,7 +7,7 @@ Both retail PS-X executables on the disc are split, rebuilt from C + assembly, a
 | Executable | Role | Retail Size | SHA-1 | Game Functions | PsyQ 4.2 SDK Symbols | Matched C Functions | Total Accounted |
 | :--- | :--- | :---: | :--- | :---: | :---: | :---: | :---: |
 | **`SLUS_007.92`** | Title / Setup / Intro Movie Player | 290,816 B (`0x47000`) | `362a030a231fc5952010909faf848a8a461bbb3c` | 208 | 375 | **94 / 208 (45.2%)** | **469 / 583 (80.4%)** |
-| **`CIV2.EXE`** | Main Strategy Game Engine | 1,351,680 B (`0x14A000`) | `919bad81720f9b0e129fd5f10fb155cd7aa3c98c` | 1,427 | 390 | **797 / 1,427 (55.9%)** | **1,186 / 1,827 (64.9%)** |
+| **`CIV2.EXE`** | Main Strategy Game Engine | 1,351,680 B (`0x14A000`) | `919bad81720f9b0e129fd5f10fb155cd7aa3c98c` | 1,427 | 390 | **798 / 1,427 (55.9%)** | **1,186 / 1,827 (64.9%)** |
 | **Combined** | **Full Game** | **1,642,496 B** | **100% Byte-Identical** | **1,635** | **765** | **890 / 1,635 (54.4%)** | **1,655 / 2,410 (68.7%)** |
 
 *(Note: every matched C function is now spliced directly into `src/slus/game.c` and
@@ -61,7 +61,7 @@ To maximize automated byte-for-byte matching before manual decompilation, severa
 
 ### 3b. Remaining Near-Misses (resume here)
 
-**Status of the current pass (civ2 797/1427, SLUS 94/208).** The full 1427-function
+**Status of the current pass (civ2 798/1427, SLUS 94/208).** The full 1427-function
 draft cache was rebuilt (`gen_m2c_cache.py --force`) and swept in three flag sets
 (`-O1 -G8`, `-O1 -G8 -fschedule-insns -fschedule-insns2`,
 `-O2 -G8 -fno-strength-reduce`): **the raw m2c drafts match nothing exactly** — every
