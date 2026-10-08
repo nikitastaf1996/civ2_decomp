@@ -5048,7 +5048,22 @@ void func_80094CBC() {
 
 }
 
-INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_80094CC4);
+/* @CFLAGS: -O2 -G8 -fno-strength-reduce */
+s32 func_80094CC4(s32 arg0) {
+    void *memcpy();
+    extern s32 D_80158944;
+    register s32 temp_v0 __asm__("$2");
+
+    if (arg0 == 0) {
+        return 0;
+    }
+    temp_v0 = D_80158944;
+    temp_v0 = arg0 ^ temp_v0;
+    arg0 = arg0 ^ temp_v0;
+    temp_v0 = arg0 ^ temp_v0;
+    D_80158944 = temp_v0;
+    return arg0;
+}
 
 INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_80094CF8);
 
