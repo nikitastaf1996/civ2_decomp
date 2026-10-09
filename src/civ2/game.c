@@ -13136,11 +13136,29 @@ void func_800E0098(s32 arg0) {
     D_80159298 = arg0 != 0;
 }
 
-INCLUDE_ASM("asm/us/civ2/nonmatchings/game", func_800E00A8);
+s32 func_800E00A8(arg0, arg1, arg2, arg3)
+    s32 arg0;
+    void *arg1;
+    s32 arg2;
+    s16 arg3;
+{
+    void *memcpy();
+    s32 func_800E1EB4(M2C_UNK);                         /* extern */
+    M2C_UNK func_800F9D64(s32, M2C_UNK, s16, s16, s32); /* extern */
+    extern s32 D_80159288;
+    register void *var_s1 __asm__("$17");
+    register s32 var_s0 __asm__("$16");
+    var_s1 = arg1;
+    var_s0 = arg2;
+    if (D_80159288 >= 0) {
+        func_800F9D64(arg0, arg1, var_s0, arg3, 0x10);
+    }
+    return var_s0 + (func_800E1EB4(var_s1) * 6);
+}
 
 
 s32 func_800E0118(s32 arg0, M2C_UNK arg1, s32 arg2, M2C_UNK arg3, s32 arg4) {
-    M2C_UNK func_800E00A8(); /* extern */
+    s32 func_800E00A8();
     s32 func_800E1EB4(); /* extern */
     s32 temp_s0;
 
@@ -13151,7 +13169,7 @@ s32 func_800E0118(s32 arg0, M2C_UNK arg1, s32 arg2, M2C_UNK arg3, s32 arg4) {
 
 
 s32 func_800E01AC(s32 arg0, M2C_UNK arg1, s32 arg2, M2C_UNK arg3, s32 arg4) {
-    M2C_UNK func_800E00A8(s32, M2C_UNK, s32, M2C_UNK);  /* extern */
+    s32 func_800E00A8();
     s32 func_800E1EB4(M2C_UNK);                         /* extern */
     extern s32 D_8015928C;
     extern s32 D_80159290;

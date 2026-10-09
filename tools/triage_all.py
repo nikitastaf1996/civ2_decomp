@@ -20,7 +20,7 @@ import subprocess
 import sys
 from concurrent.futures import ThreadPoolExecutor
 
-D = "/home/user/civ2_decomp"
+D = __import__("os").path.dirname(__import__("os").path.dirname(__import__("os").path.abspath(__file__)))
 
 
 def tri_dir(binary):
@@ -30,7 +30,7 @@ sys.path.insert(0, os.path.join(D, "tools"))
 from m2c_postprocess import enhance_c  # noqa: E402
 from draft_repair import repair as repair_draft  # noqa: E402
 
-HAND = "/home/user/drafts"
+HAND = __import__("os").environ.get("CIV2_DRAFTS", "/home/user/drafts")
 
 
 def unmatched(binary):

@@ -2,7 +2,7 @@ import sys, time, glob, subprocess, tempfile, os, re, pickle, struct
 from multiprocessing import Pool
 from elftools.elf.elffile import ELFFile
 
-D = "/home/user/civ2_decomp"
+D = __import__("os").path.dirname(__import__("os").path.dirname(__import__("os").path.abspath(__file__)))
 
 from m2c_postprocess import OP_TO_TYPE, enhance_c, replace_deref_add
 from draft_repair import repair as repair_draft

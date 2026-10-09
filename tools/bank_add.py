@@ -27,7 +27,7 @@ import sys
 import tempfile
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-BANK = "/home/user/bank.json"
+BANK = __import__("os").environ.get("CIV2_BANK", __import__("os").path.join(__import__("os").path.expanduser("~"), "bank.json"))
 
 # Anything a draft may put before the definition: the shared prologue plus the
 # declarations the sweep's translation unit prepends.
@@ -96,12 +96,12 @@ def definition_text(draft_text, fn):
     return body
 
 
-def verify(path, fn, binary, opt):
-    r = subprocess.run(
-        [sys.executable, os.path.join(ROOT, "tools", "try_match.py"),
-         path, fn, "--bin", binary, "--opt", opt],
-        capture_output=True, text=True,
-    )
+def verify(path, fn, binary, opt, source_only=False):
+    cmd = [sys.executable, os.path.join(ROOT, "tools", "try_match.py"),
+           path, fn, "--bin", binary, "--opt", opt]
+    if source_only:
+        cmd.append("--source-only")
+    r = subprocess.run(cmd, capture_output=True, text=True)
     return r.returncode == 0 and f"{fn}: MATCH" in r.stdout, r.stdout
 
 
@@ -119,7 +119,7 @@ def cmd_add(args):
             raise SystemExit(f"cannot tell which executable owns {args.func} "
                              f"(found in {have or 'neither'}); pass --bin")
         args.binary = have[0]
-    ok, out = verify(args.draft, args.func, args.binary, args.opt)
+    ok, out = verify(args.draft, args.func, args.binary, args.opt, source_only=args.source_only)
     if not ok:
         print(out, file=sys.stderr)
         raise SystemExit(f"not a byte-for-byte match: refusing to bank {args.func}")
@@ -179,6 +179,8 @@ def main(argv=None):
     ap.add_argument("--opt", default="-O1 -G8")
     ap.add_argument("--list", action="store_true")
     ap.add_argument("--check", action="store_true")
+    ap.add_argument("--source-only", action="store_true",
+                    help="verify against checked-in asm words instead of disks/us")
     args = ap.parse_args(argv)
     if args.list:
         return cmd_list(args)

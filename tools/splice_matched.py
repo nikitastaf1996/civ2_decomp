@@ -83,7 +83,7 @@ def splice_binary(binary: str):
     #   2. /tmp/matched_<binary>.pkl - the sweep tools' scratch output
     matched = {}
     rodata_after = {}
-    bank_path = "/home/user/bank.json"
+    bank_path = __import__("os").environ.get("CIV2_BANK", __import__("os").path.join(__import__("os").path.expanduser("~"), "bank.json"))
     if os.path.exists(bank_path):
         import json
 

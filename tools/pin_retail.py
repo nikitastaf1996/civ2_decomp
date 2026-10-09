@@ -28,7 +28,7 @@ import re
 import subprocess
 import sys
 
-D = "/home/user/civ2_decomp"
+D = __import__("os").path.dirname(__import__("os").path.dirname(__import__("os").path.abspath(__file__)))
 ARGS = {"$4": "arg0", "$5": "arg1", "$6": "arg2", "$7": "arg3",
         "$a0": "arg0", "$a1": "arg1", "$a2": "arg2", "$a3": "arg3"}
 SREG = {"$16": "$s0", "$17": "$s1", "$18": "$s2", "$19": "$s3", "$20": "$s4",
